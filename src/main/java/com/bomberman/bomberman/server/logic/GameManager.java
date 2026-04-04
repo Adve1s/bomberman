@@ -4,6 +4,7 @@ import com.bomberman.bomberman.shared.entity.*;
 import com.bomberman.bomberman.shared.model.GameMap;
 import com.bomberman.bomberman.shared.model.GameState;
 import com.bomberman.bomberman.shared.model.Tile;
+import com.bomberman.bomberman.shared.util.Constants;
 import com.bomberman.bomberman.shared.util.Direction;
 
 /**
@@ -37,8 +38,11 @@ public class GameManager {
     public void movePlayer(GameState state, Player player, Direction direction) {
         if (!player.isAlive()) return;
 
-        // TODO: check wall/box collision before allowing move
-        // TODO: check bomb collision (with overlap exception)
+        int targetRow = player.getRow() + direction.rowDelta;
+        int targetCol = player.getCol() + direction.colDelta;
+
+        if (!CollisionDetector.isTileWalkable(state, targetRow, targetCol)) return;
+
         player.move(direction);
     }
 
@@ -50,14 +54,12 @@ public class GameManager {
         if (!player.isAlive()) return;
         if (!player.canPlaceBomb()) return;
 
-        int row = player.getRow();
-        int col = player.getCol();
+        int row = (int) Math.round(player.getPixelY() / Constants.TILE_SIZE);
+        int col = (int) Math.round(player.getPixelX() / Constants.TILE_SIZE);
 
-        boolean tileOccupied = state.getBombs().stream()
-                .anyMatch(bomb -> bomb.isActive() && bomb.getRow() == row && bomb.getCol() == col);
-        if (tileOccupied) return;
+        if (CollisionDetector.getBombAt(state, row, col) != null) return;
 
-        Bomb bomb = new Bomb( player.getPlayerId(), row, col, player.getExplosionRange() );
+        Bomb bomb = new Bomb(player.getPlayerId(), row, col, player.getExplosionRange() );
         state.queueBomb(bomb);
         player.bombPlaced();
     }
