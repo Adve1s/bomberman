@@ -3,10 +3,7 @@ package com.bomberman.bomberman.shared.entity;
 import com.bomberman.bomberman.shared.util.Constants;
 
 /**
- * A bomb sitting on the grid. Counts down from fuse time,
- * then signals that it should explode.
- *
- * The actual explosion spawning is handled by GameState.
+ * A bomb sitting on the grid.
  */
 public class Bomb extends Entity implements BombView {
 

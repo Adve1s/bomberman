@@ -7,19 +7,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Tracks which keyboard keys are currently held down,
- * and detects single key presses for one-shot actions.
- *
+ * Tracks which keyboard keys presses
  * Two query modes:
  *   - isPressed(key):     true every frame the key is held (for movement)
  *   - consumePress(key):  true once per key press, then false until
  *                         the key is released and pressed again (for bombs)
- *
- * Usage:
- *   inputHandler.attachTo(scene);
- *   // each frame in the game loop:
- *   if (inputHandler.isPressed(KeyCode.W))          { player.move(UP); }
- *   if (inputHandler.consumePress(KeyCode.SPACE))   { placeBomb(); }
  */
 public class InputHandler {
 
@@ -33,8 +25,7 @@ public class InputHandler {
     public void attachTo(Scene scene) {
         scene.setOnKeyPressed(event -> {
             KeyCode code = event.getCode();
-            if (pressedKeys.add(code)) {
-                // First frame this key is down — mark as just pressed
+            if (pressedKeys.add(code)) { // true - added, false - exists
                 justPressedKeys.add(code);
             }
         });

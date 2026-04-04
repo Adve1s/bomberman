@@ -9,10 +9,7 @@ import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
 /**
- * JavaFX entry point.
- *
- * Creates the window and canvas, then hands control to a GameRunner.
- * The only line that decides local vs network play is the runner construction.
+ * JavaFX entry point. Creates the window and canvas.
  */
 public class GameApp extends Application {
 

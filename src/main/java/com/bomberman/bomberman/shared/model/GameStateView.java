@@ -6,11 +6,7 @@ import java.util.List;
 
 /**
  * Read-only view of the GameState.
- * Used by the Renderer and client-side code.
- *
- * Returns lists as {@code List<? extends XxxView>} so the
- * Renderer can iterate and read, but cannot cast back to the
- * concrete types or call mutation methods.
+ * Returns lists as {@code List<? extends XxxView>}
  */
 public interface GameStateView {
 

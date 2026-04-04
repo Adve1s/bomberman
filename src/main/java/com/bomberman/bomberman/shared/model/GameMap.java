@@ -4,8 +4,6 @@ import com.bomberman.bomberman.shared.util.Constants;
 
 /**
  * The game board: a 2D grid of Tile values.
- * Responsible for generating/loading the map layout
- * and answering queries about what's at each position.
  */
 public class GameMap implements GameMapView {
 
@@ -53,7 +51,6 @@ public class GameMap implements GameMapView {
 
     /**
      * Fills empty floor tiles with bricks at ~40% density.
-     * Spawn zones are cleared separately after this.
      */
     private void fillBoxes() {
         for (int row = 0; row < rows; row++) {
@@ -67,7 +64,6 @@ public class GameMap implements GameMapView {
 
     /**
      * Clears a small L-shaped area in each corner so players can move
-     * at spawn. Classic Bomberman clears the corner tile + 2 adjacent.
      */
     private void clearSpawnZones() {
         // Top-left (player 1 spawn)
@@ -109,7 +105,7 @@ public class GameMap implements GameMapView {
         return row >= 0 && row < rows && col >= 0 && col < cols;
     }
 
-    // ── GameMapView (read-only) ──
+    // GameMapView (read-only)
 
     @Override
     public Tile getTile(int row, int col) {
@@ -129,7 +125,7 @@ public class GameMap implements GameMapView {
         return cols;
     }
 
-    // ── Mutation (server-side only) ──
+    // Mutation (server-side only)
 
     public void setTile(int row, int col, Tile tile) {
         if (isInBounds(row, col)) {

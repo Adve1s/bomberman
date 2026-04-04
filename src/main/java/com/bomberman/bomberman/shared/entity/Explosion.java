@@ -3,12 +3,7 @@ package com.bomberman.bomberman.shared.entity;
 import com.bomberman.bomberman.shared.util.Constants;
 
 /**
- * One tile of an explosion. Multiple Explosion entities are spawned
- * when a bomb goes off (center + each direction up to range).
- *
- * Has a short lifetime then deactivates.
- * Kill/destroy logic (hitting players, bricks, other bombs)
- * is handled by GameState when these are spawned.
+ * One tile of an explosion.
  */
 public class Explosion extends Entity implements ExplosionView {
 

@@ -5,13 +5,6 @@ import com.bomberman.bomberman.shared.util.Direction;
 
 /**
  * A player on the map.
- *
- * Movement is grid-based with smooth interpolation:
- *   - move(direction) sets a target tile (if not already moving)
- *   - update(deltaTime) slides pixelX/pixelY toward the target each frame
- *   - On arrival, row/col update to the target and the player can move again
- *   - If the key is still held, the runner calls move() again immediately,
- *     so movement feels continuous with no gap between tiles
  */
 public class Player extends Entity implements PlayerView {
 
@@ -84,7 +77,6 @@ public class Player extends Entity implements PlayerView {
 
     /**
      * Requests a move one tile in the given direction.
-     * Ignored if the player is already sliding to a target tile.
      */
     public void move(Direction direction) {
         if (!active) return;
@@ -102,14 +94,6 @@ public class Player extends Entity implements PlayerView {
         targetPixelX = newCol * Constants.TILE_SIZE;
         targetPixelY = newRow * Constants.TILE_SIZE;
         moving = true;
-    }
-
-    /**
-     * Whether the player is currently between tiles.
-     * Useful for GameManager later — e.g. prevent placing a bomb while moving.
-     */
-    public boolean isMoving() {
-        return moving;
     }
 
     // Bomb management
@@ -140,7 +124,7 @@ public class Player extends Entity implements PlayerView {
         speed += amount;
     }
 
-    // ── PlayerView (read-only) ──
+    // PlayerView (read-only)
 
     @Override
     public int getPlayerId() {

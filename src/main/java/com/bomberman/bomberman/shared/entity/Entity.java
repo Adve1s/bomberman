@@ -3,11 +3,7 @@ package com.bomberman.bomberman.shared.entity;
 import com.bomberman.bomberman.shared.util.Constants;
 
 /**
- * Base class for anything that lives on the game map:
- * players, bombs, explosions, power-ups.
- *
- * Tracks grid position (which tile the entity is on)
- * and an active flag used for deferred removal.
+ * Base class for anything that lives on the game map
  */
 public abstract class Entity implements EntityView {
 
@@ -19,11 +15,7 @@ public abstract class Entity implements EntityView {
     protected double pixelX;
     protected double pixelY;
 
-    /**
-     * Whether this entity is still active.
-     * When set to false, the entity will be removed
-     * from its list at the end of the current update cycle.
-     */
+    /** Whether this entity is still active. */
     protected boolean active;
 
     /**
@@ -40,7 +32,6 @@ public abstract class Entity implements EntityView {
 
     /**
      * Called every frame to advance this entity's state.
-     * Every subclass must implement this, even if the body is empty.
      *
      * @param deltaTime seconds since last update
      */

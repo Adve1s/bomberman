@@ -1,8 +1,7 @@
 package com.bomberman.bomberman.shared.entity;
 
 /**
- * A collectible power-up revealed when a brick is destroyed.
- * Sits on the grid until a player walks over it.
+ * A collectible power-up revealed when a box is destroyed.
  */
 public class PowerUp extends Entity implements PowerUpView {
 
@@ -25,7 +24,7 @@ public class PowerUp extends Entity implements PowerUpView {
     @Override
     public void update(double deltaTime) {
         // Power-ups are static, no per-frame behavior.
-        // Pickup is handled by collision detection in GameState.
+        // Pickup is handled by collision detection.
     }
 
     // PowerUpView (read-only)

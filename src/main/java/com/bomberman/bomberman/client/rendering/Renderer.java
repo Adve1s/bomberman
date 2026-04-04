@@ -11,7 +11,6 @@ import javafx.scene.paint.Color;
 
 /**
  * Draws the game state onto a JavaFX Canvas.
- *
  * Draw order (back to front):
  *   1. Tile grid (floor, walls, boxes)
  *   2. Power-ups
