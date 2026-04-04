@@ -13,7 +13,7 @@ import javafx.stage.Stage;
  */
 public class GameApp extends Application {
 
-    private GameRunner runner;
+    private LocalGameRunner runner;
 
     @Override
     public void start(Stage stage) {
