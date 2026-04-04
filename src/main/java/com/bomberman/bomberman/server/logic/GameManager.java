@@ -8,54 +8,48 @@ import com.bomberman.bomberman.shared.util.Constants;
 import com.bomberman.bomberman.shared.util.Direction;
 
 /**
- * The game brain. Runs all game logic against a GameState:
- *   - Game setup (player spawning)
- *   - Player actions (movement, bomb placement)
- *   - Update orchestration (tick entities, handle explosions)
- *   - Collision detection (TODO)
- *   - Win/lose conditions (TODO)
+ * The game brain. Runs all game logic against a GameState.
  */
 public class GameManager {
 
     // Game setup
 
-    /**
-     * Sets up the initial game state with players in spawn positions.
-     */
     public void initializeGame(GameState state) {
         state.addPlayer(new Player(0, 1, 1));
-        // Future players:
-        // state.addPlayer(new Player(1, 1, Constants.GRID_COLS - 2));
-        // state.addPlayer(new Player(2, Constants.GRID_ROWS - 2, 1));
-        // state.addPlayer(new Player(3, Constants.GRID_ROWS - 2, Constants.GRID_COLS - 2));
     }
 
     // Player actions
 
     /**
-     * Attempts to move a player one tile in the given direction.
+     * Moves the player by pixels in the given direction.
      */
-    public void movePlayer(GameState state, Player player, Direction direction) {
+    public void movePlayer(GameState state, Player player, Direction direction, double deltaTime) {
         if (!player.isAlive()) return;
 
-        int targetRow = player.getRow() + direction.rowDelta;
-        int targetCol = player.getCol() + direction.colDelta;
+        double speed = player.getSpeed() * Constants.TILE_SIZE; // pixels per second
+        double step = speed * deltaTime;
 
-        if (!CollisionDetector.isTileWalkable(state, targetRow, targetCol)) return;
+        double currentX = player.getPixelX();
+        double currentY = player.getPixelY();
 
-        player.move(direction);
+        double newX = currentX + direction.colDelta * step;
+        double newY = currentY + direction.rowDelta * step;
+
+            if (!CollisionDetector.collidesWithTerrain(state, newX, newY)
+                    && !CollisionDetector.collidesWithBombs(state, newX, newY, currentX, currentY)){
+            player.setPixelPosition(newX, newY);
+        }
     }
 
     /**
-     * Attempts to place a bomb at the player's current position.
-     * Validates bomb limit and prevents stacking on the same tile.
+     * Attempts to place a bomb at the nearest tile to the player's position.
      */
     public void placeBomb(GameState state, Player player) {
         if (!player.isAlive()) return;
         if (!player.canPlaceBomb()) return;
 
-        int row = (int) Math.round(player.getPixelY() / Constants.TILE_SIZE);
-        int col = (int) Math.round(player.getPixelX() / Constants.TILE_SIZE);
+        int row = (int) Math.round(player.getPixelY() / (double) Constants.TILE_SIZE);
+        int col = (int) Math.round(player.getPixelX() / (double) Constants.TILE_SIZE);
 
         if (CollisionDetector.getBombAt(state, row, col) != null) return;
 
@@ -68,18 +62,11 @@ public class GameManager {
 
     /**
      * Advances the game by one frame.
-     * Call order matters:
-     *   1. Update all entities (bombs count down, explosions fade, players move)
-     *   2. Handle bomb explosions (spawn explosion entities, destroy bricks)
-     *   3. Check collisions (explosions kill players, players pick up power-ups)
-     *   4. Remove inactive entities
-     *   5. Flush deferred add queues
-     *   6. Check win/lose conditions
      */
     public void update(GameState state, double deltaTime) {
         if (state.isGameOver()) return;
 
-        // 1. Update all entities
+        // 1. Update all entities (player syncs grid pos, bombs tick, explosions fade)
         state.getPlayers().forEach(p -> p.update(deltaTime));
         state.getBombs().forEach(b -> b.update(deltaTime));
         state.getExplosions().forEach(e -> e.update(deltaTime));
@@ -87,20 +74,12 @@ public class GameManager {
         // 2. Handle bombs that just became inactive this frame (exploded)
         for (Bomb bomb : state.getBombs()) {
             if (!bomb.isActive()) {
-                spawnExplosions(state, bomb);
-
-                for (Player player : state.getPlayers()) {
-                    if (player.getPlayerId() == bomb.getOwnerPlayerId()) {
-                        player.bombExploded();
-                        break;
-                    }
-                }
+                detonateBomb(state, bomb);
             }
         }
 
         // 3. Collision checks
-        // TODO: explosion vs player (kill)
-        // TODO: explosion vs bomb (chain reaction)
+        checkExplosionCollisions(state);
         // TODO: player vs power-up (pickup)
 
         // 4. Remove inactive entities
@@ -115,22 +94,48 @@ public class GameManager {
         // TODO: check if only one player alive
     }
 
+    // Collision checks
+
+    private void checkExplosionCollisions(GameState state) {
+        for (Explosion explosion : state.getExplosions()) {
+            if (!explosion.isActive()) continue;
+
+            int row = explosion.getRow();
+            int col = explosion.getCol();
+
+            for (Player player : CollisionDetector.getPlayersAt(state, row, col)) {
+                player.kill();
+            }
+
+            Bomb bomb = CollisionDetector.getBombAt(state, row, col);
+            if (bomb != null) {
+                detonateBomb(state, bomb);
+            }
+        }
+    }
+
     // Explosion logic
 
-    /**
-     * Spawns explosion entities from the bomb center outward in 4 directions.
-     * Stops at walls, destroys bricks (and stops), may reveal power-ups.
-     */
+    private void detonateBomb(GameState state, Bomb bomb) {
+        bomb.explode();
+        spawnExplosions(state, bomb);
+
+        for (Player player : state.getPlayers()) {
+            if (player.getPlayerId() == bomb.getOwnerPlayerId()) {
+                player.bombExploded();
+                break;
+            }
+        }
+    }
+
     private void spawnExplosions(GameState state, Bomb bomb) {
         int row = bomb.getRow();
         int col = bomb.getCol();
         int range = bomb.getRange();
         GameMap map = state.getGameMap();
 
-        // Center explosion
         state.queueExplosion(new Explosion(row, col));
 
-        // Spread in each direction
         for (Direction dir : Direction.values()) {
             for (int i = 1; i <= range; i++) {
                 int r = row + dir.rowDelta * i;

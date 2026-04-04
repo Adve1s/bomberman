@@ -1,7 +1,6 @@
 package com.bomberman.bomberman.shared.entity;
 
 import com.bomberman.bomberman.shared.util.Constants;
-import com.bomberman.bomberman.shared.util.Direction;
 
 /**
  * A player on the map.
@@ -18,19 +17,6 @@ public class Player extends Entity implements PlayerView {
     // Current bomb tracking
     private int bombsPlaced;
 
-    // Smooth movement state
-
-    /** Whether the player is currently sliding between tiles. */
-    private boolean moving;
-
-    /** The tile we're sliding toward. */
-    private int targetRow;
-    private int targetCol;
-
-    /** Pixel position of the target tile (cached to avoid recalculating each frame). */
-    private double targetPixelX;
-    private double targetPixelY;
-
     /**
      * @param playerId unique identifier for this player
      * @param row      starting grid row
@@ -43,60 +29,32 @@ public class Player extends Entity implements PlayerView {
         this.maxBombs = Constants.DEFAULT_BOMB_COUNT;
         this.explosionRange = Constants.DEFAULT_EXPLOSION_RANGE;
         this.bombsPlaced = 0;
-        this.moving = false;
     }
 
     @Override
     public void update(double deltaTime) {
         if (!active) return;
-        if (!moving) return;
 
-        double pixelsPerSecond = speed * Constants.TILE_SIZE;
-        double maxStep = pixelsPerSecond * deltaTime;
-
-        // Distance remaining to target
-        double dx = targetPixelX - pixelX;
-        double dy = targetPixelY - pixelY;
-        double distanceRemaining = Math.sqrt(dx * dx + dy * dy);
-
-        if (distanceRemaining <= maxStep) {
-            // Arrived — snap to exact target position
-            pixelX = targetPixelX;
-            pixelY = targetPixelY;
-            row = targetRow;
-            col = targetCol;
-            moving = false;
-        } else {
-            // Slide toward target
-            pixelX += (dx / distanceRemaining) * maxStep;
-            pixelY += (dy / distanceRemaining) * maxStep;
-        }
+        // Sync grid position to whichever tile the player's center is on
+        double centerX = pixelX + Constants.TILE_SIZE / 2.0;
+        double centerY = pixelY + Constants.TILE_SIZE / 2.0;
+        this.col = (int) (centerX / Constants.TILE_SIZE);
+        this.row = (int) (centerY / Constants.TILE_SIZE);
     }
 
-    // Movement
+    // PlayerView (read-only)
 
-    /**
-     * Requests a move one tile in the given direction.
-     */
-    public void move(Direction direction) {
-        if (!active) return;
-        if (moving) return;
-
-        int newRow = row + direction.rowDelta;
-        int newCol = col + direction.colDelta;
-
-        // Basic bounds check — wall/box collision will be added by GameManager later
-        if (newRow < 0 || newRow >= Constants.GRID_ROWS) return;
-        if (newCol < 0 || newCol >= Constants.GRID_COLS) return;
-
-        targetRow = newRow;
-        targetCol = newCol;
-        targetPixelX = newCol * Constants.TILE_SIZE;
-        targetPixelY = newRow * Constants.TILE_SIZE;
-        moving = true;
+    @Override
+    public int getPlayerId() {
+        return playerId;
     }
 
-    // Bomb management
+    @Override
+    public boolean isAlive() {
+        return active;
+    }
+
+    // Bomb management (server-side only)
 
     public boolean canPlaceBomb() {
         return bombsPlaced < maxBombs;
@@ -110,7 +68,7 @@ public class Player extends Entity implements PlayerView {
         if (bombsPlaced > 0) bombsPlaced--;
     }
 
-    // Power-up application
+    // Power-up application (server-side only)
 
     public void addBombCapacity(int amount) {
         maxBombs += amount;
@@ -122,18 +80,6 @@ public class Player extends Entity implements PlayerView {
 
     public void addSpeed(double amount) {
         speed += amount;
-    }
-
-    // PlayerView (read-only)
-
-    @Override
-    public int getPlayerId() {
-        return playerId;
-    }
-
-    @Override
-    public boolean isAlive() {
-        return active;
     }
 
     // Getters

@@ -13,7 +13,6 @@ import javafx.scene.input.KeyCode;
 
 /**
  * Runs the game locally — both game logic and rendering in one process.
- *
  * This class has exactly three responsibilities:
  *   1. Run the timing loop (AnimationTimer, delta time)
  *   2. Translate JavaFX key codes into game commands
@@ -49,10 +48,9 @@ public class LocalGameRunner {
                 double deltaTime = (nowNanos - previousNanos) / 1_000_000_000.0;
                 previousNanos = nowNanos;
 
-                // Cap delta so a long pause doesn't cause huge jumps
                 if (deltaTime > 0.1) deltaTime = 0.1;
 
-                processInput();
+                processInput(deltaTime);
                 gameManager.update(gameState, deltaTime);
                 renderer.render(gameState);
             }
@@ -66,28 +64,31 @@ public class LocalGameRunner {
         }
     }
 
-    // ── Input translation ──
+    // Input translation
 
     /**
      * Translates JavaFX key presses into game commands.
      */
-    private void processInput() {
+    private void processInput(double deltaTime) {
         if (gameState.getPlayers().isEmpty()) return;
 
         Player player = gameState.getPlayers().get(0);
 
-        // ── Movement ──
+        // Movement
         if (inputHandler.isPressed(KeyCode.UP) || inputHandler.isPressed(KeyCode.W)) {
-            gameManager.movePlayer(gameState, player, Direction.UP);
-        } else if (inputHandler.isPressed(KeyCode.DOWN) || inputHandler.isPressed(KeyCode.S)) {
-            gameManager.movePlayer(gameState, player, Direction.DOWN);
-        } else if (inputHandler.isPressed(KeyCode.LEFT) || inputHandler.isPressed(KeyCode.A)) {
-            gameManager.movePlayer(gameState, player, Direction.LEFT);
-        } else if (inputHandler.isPressed(KeyCode.RIGHT) || inputHandler.isPressed(KeyCode.D)) {
-            gameManager.movePlayer(gameState, player, Direction.RIGHT);
+            gameManager.movePlayer(gameState, player, Direction.UP, deltaTime);
+        }
+        if (inputHandler.isPressed(KeyCode.DOWN) || inputHandler.isPressed(KeyCode.S)) {
+            gameManager.movePlayer(gameState, player, Direction.DOWN, deltaTime);
+        }
+        if (inputHandler.isPressed(KeyCode.LEFT) || inputHandler.isPressed(KeyCode.A)) {
+            gameManager.movePlayer(gameState, player, Direction.LEFT, deltaTime);
+        }
+        if (inputHandler.isPressed(KeyCode.RIGHT) || inputHandler.isPressed(KeyCode.D)) {
+            gameManager.movePlayer(gameState, player, Direction.RIGHT, deltaTime);
         }
 
-        // ── Bomb placement ──
+        // Bomb placement
         if (inputHandler.consumePress(KeyCode.SPACE)) {
             gameManager.placeBomb(gameState, player);
         }

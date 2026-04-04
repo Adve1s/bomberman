@@ -20,6 +20,10 @@ public final class Constants {
     public static final int DEFAULT_BOMB_COUNT = 1;
     public static final int DEFAULT_EXPLOSION_RANGE = 1;
 
+    // Player hitbox — slightly smaller than a tile so the player can
+    public static final int PLAYER_HITBOX_SIZE = 40;
+    public static final int PLAYER_HITBOX_OFFSET = (TILE_SIZE - PLAYER_HITBOX_SIZE) / 2;
+
     // Bomb timing
     public static final double BOMB_FUSE_SECONDS = 2.5;
 
