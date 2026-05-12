@@ -19,10 +19,13 @@ public class GameState implements GameStateView {
     private final List<Explosion> explosions;
     private final List<PowerUp> powerUps;
 
-    // Deferred add queues (populated during update, applied after)
-    private final List<Bomb> bombsToAdd;
-    private final List<Explosion> explosionsToAdd;
-    private final List<PowerUp> powerUpsToAdd;
+    // Deferred add queues (populated during update, applied after).
+    // Marked transient: server-only scratch space, never sent over the wire.
+    // On the client these fields will be null after deserialization, which is
+    // fine because the client never runs the update loop or calls queue*().
+    private transient final List<Bomb> bombsToAdd;
+    private transient final List<Explosion> explosionsToAdd;
+    private transient final List<PowerUp> powerUpsToAdd;
 
     private boolean gameOver;
 
