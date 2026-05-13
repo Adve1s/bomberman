@@ -11,6 +11,7 @@ module com.bomberman.bomberman {
     // Kryo needs reflective access to read fields of serialized classes
     opens com.bomberman.bomberman.shared.model to com.esotericsoftware.kryo;
     opens com.bomberman.bomberman.shared.entity to com.esotericsoftware.kryo;
+    opens com.bomberman.bomberman.shared.network to com.esotericsoftware.kryo;
 
     // Export packages so they're accessible across the module
     exports com.bomberman.bomberman.client.app;

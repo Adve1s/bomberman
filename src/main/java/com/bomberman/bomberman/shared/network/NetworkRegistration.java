@@ -43,6 +43,22 @@ public final class NetworkRegistration {
         // Collection
         kryo.register(ArrayList.class);
 
-        // Phase 2: command/message classes go here
+        // Network messages — client → server
+        kryo.register(JoinRequest.class);
+        kryo.register(MoveCommand.class);
+        kryo.register(PlaceBombCommand.class);
+        kryo.register(ReadyCommand.class);
+        kryo.register(StartGameCommand.class);
+        kryo.register(Ping.class);
+
+        // Network messages — server → client
+        kryo.register(JoinAccepted.class);
+        kryo.register(JoinRejected.class);
+        kryo.register(LobbyState.class);
+        kryo.register(GameStarted.class);
+        kryo.register(StateSnapshot.class);
+        kryo.register(PlayerLeft.class);
+        kryo.register(Pong.class);
+        kryo.register(GameOver.class);
     }
 }
