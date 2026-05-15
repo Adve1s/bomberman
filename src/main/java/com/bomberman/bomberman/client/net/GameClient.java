@@ -10,13 +10,19 @@ import com.esotericsoftware.kryonet.Listener;
 import java.io.IOException;
 
 /**
- * Owns the network connection to a GameServer. Sends commands;
- * Threading:
+ * Owns the network connection to a GameServer. Sends commands; stores the latest
+ * snapshot received. Has no JavaFX dependency — testable on its own.
+ * Threading
  *   - KryoNet's Update thread fires received() / disconnected().
  *   - The FX thread polls getLatestSnapshot() / getMyPlayerId() / isGameStarted()
  *     once per frame from the AnimationTimer.
- *   - All "latest received" fields are volatile because they cross threads.
- *     Pattern: net thread writes, FX thread reads.
+ *   - Callbacks (setOnGameStarted etc.) ALSO fire on the network thread. Callers
+ *     that touch UI must wrap in Platform.runLater themselves.
+ *
+ * For teammates extending this
+ * Add more callbacks following the {@link #setOnGameStarted} template — see the
+ * TODO comments inside {@link #handleReceived} for the natural extension points
+ * ({@code onJoinRejected}, {@code onLobbyState}, {@code onGameOver}, {@code onDisconnected}).
  */
 public class GameClient {
 
@@ -34,6 +40,10 @@ public class GameClient {
     /** True once GameStarted arrives. */
     private volatile boolean gameStarted = false;
 
+    // Callback hooks. volatile because written on the FX thread (during wiring)
+    // and read on the network thread (when the message arrives).
+    private volatile Runnable onGameStartedCallback;
+
     public GameClient(String playerName) {
         this.playerName = playerName;
         this.kryoClient = new Client(Constants.NETWORK_WRITE_BUFFER_SIZE, Constants.NETWORK_OBJECT_BUFFER_SIZE);
@@ -41,8 +51,6 @@ public class GameClient {
 
         kryoClient.addListener(new Listener() {
             @Override public void received(Connection connection, Object object) {
-                // KryoNet fires received() for its internal framework messages too
-                // (keepalives, etc). Filter to our types only.
                 if (object instanceof NetworkMessage message) {
                     handleReceived(message);
                 }
@@ -72,11 +80,20 @@ public class GameClient {
         kryoClient.sendTCP(message);
     }
 
-    // Queries polled by the FX thread each frame
-
+    // Polled by the FX thread each frame
     public GameState getLatestSnapshot() { return latestSnapshot; }
     public int       getMyPlayerId()     { return myPlayerId; }
-    public boolean   isGameStarted()     { return gameStarted; }
+
+    // Callback registration
+
+    /**
+     * Sets a callback to run when the server sends GameStarted.
+     * Threading: the callback fires on the network thread, not the FX
+     * thread. If it touches the UI, wrap the body in {@code Platform.runLater}.
+     */
+    public void setOnGameStarted(Runnable callback) {
+        this.onGameStartedCallback = callback;
+    }
 
     // Network thread
 
@@ -91,17 +108,26 @@ public class GameClient {
             }
 
             case JoinRejected joinRejected -> {
-                // TODO (teammate A): show rejection overlay with reason.
+                // TODO (teammate A): fire an onJoinRejected callback. Pattern:
+                // declare:
+                //   private volatile Consumer<String> onJoinRejectedCallback;
+                // Setter:
+                //   public void setOnJoinRejected(Consumer<String> cb) { this.onJoinRejectedCallback = cb; }
+                // And here:
+                //     Consumer<String> cb = this.onJoinRejectedCallback;
+                //     if (cb != null) cb.accept(joinRejected.getReason());
                 System.err.println("[client] join rejected: " + joinRejected.getReason());
             }
 
             case GameStarted gameStarted -> {
                 this.gameStarted = true;
                 System.out.println("[client] game started");
+                Runnable callback = this.onGameStartedCallback;
+                if (callback != null) callback.run();
             }
 
             case GameOver gameOver -> {
-                // TODO (teammate A/C): show win/lose screen.
+                // TODO (teammate A): onGameOver callback for the win/lose screen.
                 if (gameOver.isDraw()) {
                     System.out.println("[client] game over: draw");
                 } else {
@@ -110,11 +136,16 @@ public class GameClient {
             }
 
             case LobbyState lobbyState -> {
-                // TODO (teammate A): render lobby UI from this.
+                // TODO (teammate A): onLobbyState callback to refresh the lobby UI.
                 System.out.println("[client] LobbyState received (TODO teammate A)");
             }
 
-            case PlayerLeft playerLeft -> System.out.println("[client] player " + playerLeft.getPlayerId() + " left");
+            case PlayerLeft playerLeft ->
+            {
+                // TODO (teammate B): onPlayerLeft callback for in-game notification —
+                // "Alice disconnected" overlay, etc.
+                System.out.println("[client] player " + playerLeft.getPlayerId() + " left");
+            }
 
             case Pong pong -> {
                 // TODO (teammate B): latency = System.currentTimeMillis() - pong.getClientTimestamp();
@@ -126,7 +157,7 @@ public class GameClient {
     }
 
     private void handleDisconnected() {
-        // TODO (teammate B): show "disconnected" overlay, offer reconnect.
+        // TODO (teammate B): onDisconnected callback to show "lost connection" overlay.
         System.out.println("[client] disconnected from server (TODO teammate B)");
     }
 }
