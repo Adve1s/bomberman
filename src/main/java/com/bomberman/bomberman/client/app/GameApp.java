@@ -21,26 +21,33 @@ import java.util.List;
  * to transition between screens.
  * On connect failure, returns to MainMenu with an error label and the user's
  * last input preserved so they can fix a typo and retry.
+ *
+ * Host vs Join
+ *   - Host: starts an in-process GameServer, then connects to localhost.
+ *     The server runs in the same JVM; it shuts down when the window closes.
+ *   - Join: just connects to whatever the user typed in the host field.
+ *
  * Launch modes
- *   - Default: client (shows menu).
- *   - {@code --server}: headless GameServer, no JavaFX window.
+ *   - Default: client (shows menu with Host/Join buttons).
+ *   - {@code --server}: headless dedicated GameServer, no JavaFX window.
  *
  * CLI args (client mode)
- *   - args[0] → pre-fills the host field (default "localhost")
- *   - args[1] → pre-fills the name field (default "Player")
+ *   - args[0] → pre-fills the host field (default "")
+ *   - args[1] → pre-fills the name field (default "")
  */
 public class GameApp extends Application {
 
     private Stage stage;
-    private Scene scene; // single Scene, root is swapped per screen
+    private Scene scene;
     private GameClient client;
     private NetworkedGameRunner runner;
+    private GameServer inProcessServer; // non-null only when user chose Host
 
     @Override
     public void start(Stage stage) {
         this.stage = stage;
         this.scene = new Scene(
-                MainMenu.create(this::launchGame, defaultHost(), defaultName(), null),
+                MainMenu.create(this::joinGame, this::hostGame, defaultHost(), defaultName(), null),
                 Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT
         );
 
@@ -57,18 +64,39 @@ public class GameApp extends Application {
     }
 
     private void shutdown() {
-        if (runner != null) runner.stop();
-        if (client != null) client.disconnect();
+        if (runner != null)          { runner.stop();            runner = null; }
+        if (client != null)          { client.disconnect();      client = null; }
+        if (inProcessServer != null) { inProcessServer.stop();   inProcessServer = null; }
     }
 
     /**
-     * Called by MainMenu when Play is clicked. Demonstrates the chain teammates
-     * will reuse for lobby actions:
+     * Host button handler. Starts an in-process server, then connects to it
+     * as a regular client at localhost. If the server fails to start (e.g.
+     * port already in use), returns to the menu with an error message.
+     */
+    private void hostGame(String name) {
+        try {
+            inProcessServer = new GameServer();
+            inProcessServer.start();
+        } catch (IOException ex) {
+            System.err.println("[client] couldn't start in-process server: " + ex.getMessage());
+            inProcessServer = null;
+            returnToMenu("", name, "Couldn't start server: " + ex.getMessage());
+            return;
+        }
+        joinGame("localhost", name);
+    }
+
+    /**
+     * Join button handler — and the entry point for the hosted path too
+     * (hostGame falls through to this once the server is running).
+     *
+     * Demonstrates the chain teammates will reuse for lobby actions:
      *   1. Swap to a transitional screen
      *   2. Wire the callback that handles the server's response
      *   3. Kick off the network call on a background thread
      */
-    private void launchGame(String host, String name) {
+    private void joinGame(String host, String name) {
         stage.setTitle("Bomberman — " + name + " → " + host);
 
         // (1) transitional screen
@@ -102,14 +130,13 @@ public class GameApp extends Application {
 
     /**
      * Returns to the menu with the user's last input preserved and an optional
-     * error message displayed. Called on connect failure, and a good hook for
-     * future "kicked from lobby" / "disconnected" flows.
+     * error message displayed. Tears down anything we started — runner, client,
+     * AND the in-process server if Host was the path that failed.
      */
     private void returnToMenu(String lastHost, String lastName, String errorMessage) {
-        if (runner != null) { runner.stop();       runner = null; }
-        if (client != null) { client.disconnect(); client = null; }
+        shutdown();
         stage.setTitle("Bomberman");
-        scene.setRoot(MainMenu.create(this::launchGame, lastHost, lastName, errorMessage));
+        scene.setRoot(MainMenu.create(this::joinGame, this::hostGame, lastHost, lastName, errorMessage));
     }
 
     // Defaults / CLI args
