@@ -1,19 +1,20 @@
 package com.bomberman.bomberman.shared.network;
 
-import com.bomberman.bomberman.shared.util.Direction;
-
 /**
- * Sent each tick the client wants to move in this direction.
- * Sending stops when the player releases the key — no explicit stop message needed.
+ * Sent each frame the client wants to move. dx and dy together form a 2D intent:
+ *   dx = -1 (left), 0 (none), 1 (right)
+ *   dy = -1 (up),   0 (none), 1 (down)
+ * Both nonzero = diagonal. Server normalizes diagonal speed and handles wall sliding per axis.
  */
 public class MoveCommand implements ClientToServerMessage {
-    private final Direction direction;
+    private final int dx;
+    private final int dy;
 
-    public MoveCommand(Direction direction) {
-        this.direction = direction;
+    public MoveCommand(int dx, int dy) {
+        this.dx = dx;
+        this.dy = dy;
     }
 
-    public Direction getDirection() {
-        return direction;
-    }
+    public int getDx() { return dx; }
+    public int getDy() { return dy; }
 }

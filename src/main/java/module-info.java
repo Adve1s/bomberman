@@ -17,8 +17,11 @@ module com.bomberman.bomberman {
     exports com.bomberman.bomberman.client.app;
     exports com.bomberman.bomberman.client.rendering;
     exports com.bomberman.bomberman.client.input;
+    exports com.bomberman.bomberman.client.runner;
+    exports com.bomberman.bomberman.client.net;
     exports com.bomberman.bomberman.local;
     exports com.bomberman.bomberman.shared.model;
     exports com.bomberman.bomberman.shared.entity;
     exports com.bomberman.bomberman.shared.util;
+    exports com.bomberman.bomberman.shared.network;
 }
