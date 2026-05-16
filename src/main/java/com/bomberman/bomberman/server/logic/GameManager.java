@@ -117,9 +117,11 @@ public class GameManager {
 
         // 3. Collision checks
         checkExplosionCollisions(state);
-        // TODO (teammate C): player vs power-up (pickup)
 
-        // 4. Game progression
+        // 4. Power up collision checks
+        checkPowerUpCollisions(state);
+
+        // 5. Game progression
 
         // TODO (teammate C): shrinking map / sudden death / round timer.
         // Typical Bomberman progression: after ~60s, start marking border tiles
@@ -136,15 +138,15 @@ public class GameManager {
         // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
         // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
 
-        // 5. Remove inactive entities
+        // 6. Remove inactive entities
         state.getBombs().removeIf(b -> !b.isActive());
         state.getExplosions().removeIf(e -> !e.isActive());
         state.getPowerUps().removeIf(p -> !p.isActive());
 
-        // 6. Flush deferred queues
+        // 7. Flush deferred queues
         state.flushQueues();
 
-        // 7. Win/lose check
+        // 8. Win/lose check
         // TODO (teammate C): check if only one player alive
     }
 
@@ -164,6 +166,28 @@ public class GameManager {
             Bomb bomb = CollisionDetector.getBombAt(state, row, col);
             if (bomb != null) {
                 detonateBomb(state, bomb);
+            }
+        }
+    }
+
+    // Power up collision checks
+
+    private void checkPowerUpCollisions(GameState state){
+        for (Player player : state.getPlayers()){
+            for (PowerUp powerUp : state.getPowerUps()){
+                if (!powerUp.isActive()) continue;
+
+                if (player.getCol() == powerUp.getCol() && player.getRow() == powerUp.getRow()){
+                    PowerUp.PowerUpType type = powerUp.getType();
+
+                    switch (type){
+                        case EXTRA_RANGE -> player.addExplosionRange(Constants.RANGE_EFFECT);
+                        case SPEED_BOOST -> player.addSpeed(Constants.SPEED_EFFECT);
+                        case EXTRA_BOMB -> player.addBombCapacity(Constants.BOMB_EFFECT);
+                    }
+
+                    powerUp.destroy();
+                }
             }
         }
     }
@@ -209,7 +233,7 @@ public class GameManager {
                     double typeRoll = Math.random();
 
                     if (typeRoll <= spawnChance){
-                        double type = (int)(Math.random() * 3);
+                        int type = (int)(Math.random() * 3);
                         PowerUp.PowerUpType powerUpType;
 
                         if (type == 0){

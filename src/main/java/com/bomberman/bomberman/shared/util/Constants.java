@@ -34,4 +34,9 @@ public final class Constants {
     public static final int NETWORK_PORT = 8765;
     public static final int NETWORK_WRITE_BUFFER_SIZE = 32 * 1024;
     public static final int NETWORK_OBJECT_BUFFER_SIZE = 32 * 1024;
+
+    // Power up effects
+    public static final int RANGE_EFFECT = 1;
+    public static final double SPEED_EFFECT = 0.3;
+    public static final int BOMB_EFFECT = 1;
 }
