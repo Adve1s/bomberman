@@ -136,8 +136,4 @@ public class GameMap implements GameMapView {
     public boolean isWalkable(int row, int col) {
         return getTile(row, col) == Tile.FLOOR;
     }
-
-    public Tile[][] getGrid() {
-        return grid;
-    }
 }

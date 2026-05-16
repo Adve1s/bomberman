@@ -12,33 +12,70 @@ import com.bomberman.bomberman.shared.util.Direction;
  */
 public class GameManager {
 
-    // Game setup
-
-    public void initializeGame(GameState state) {
-        state.addPlayer(new Player(0, 1, 1));
-    }
-
     // Player actions
 
     /**
      * Moves the player by pixels in the given direction.
      */
-    public void movePlayer(GameState state, Player player, Direction direction, double deltaTime) {
+    public void movePlayer(GameState state, Player player, int dx, int dy, double deltaTime) {
         if (!player.isAlive()) return;
+        if (dx == 0 && dy == 0) return;
 
-        double speed = player.getSpeed() * Constants.TILE_SIZE; // pixels per second
+        double speed = player.getSpeed() * Constants.TILE_SIZE;
         double step = speed * deltaTime;
+
+        // No normalization — pressing UP+RIGHT moves at √2x cardinal speed.
+        double stepX = dx * step;
+        double stepY = dy * step;
 
         double currentX = player.getPixelX();
         double currentY = player.getPixelY();
 
-        double newX = currentX + direction.colDelta * step;
-        double newY = currentY + direction.rowDelta * step;
+        // X-axis with slide-to-wall
+        currentX = slideAxis(state, currentX, currentY, stepX, true, currentX, currentY);
+        // Y-axis with slide-to-wall — uses updated X so wall-sliding around corners works
+        currentY = slideAxis(state, currentX, currentY, stepY, false, currentX, currentY);
 
-            if (!CollisionDetector.collidesWithTerrain(state, newX, newY)
-                    && !CollisionDetector.collidesWithBombs(state, newX, newY, currentX, currentY)){
-            player.setPixelPosition(newX, newY);
+        player.setPixelPosition(currentX, currentY);
+    }
+
+    /**
+     * Moves on a single axis. If the full step is clear, takes it. If blocked,
+     * binary-searches for the largest sub-step that doesn't collide, so the
+     * player ends up flush against the wall instead of stopping short.
+     */
+    private double slideAxis(GameState state, double currentX, double currentY,
+                             double axisStep, boolean isX, double fromX, double fromY) {
+        if (axisStep == 0) return isX ? currentX : currentY;
+
+        double tryX = isX ? currentX + axisStep : currentX;
+        double tryY = isX ? currentY : currentY + axisStep;
+        if (canMoveTo(state, tryX, tryY, fromX, fromY)) {
+            return isX ? tryX : tryY;
         }
+
+        // Blocked — binary search for max valid sub-step.
+        double low = 0, high = Math.abs(axisStep);
+        double sign = Math.signum(axisStep);
+        for (int i = 0; i < 8; i++) { // 8 iterations → < 0.02px precision for step ≤ 5px
+            double mid = (low + high) / 2;
+            double midX = isX ? currentX + sign * mid : currentX;
+            double midY = isX ? currentY : currentY + sign * mid;
+            if (canMoveTo(state, midX, midY, fromX, fromY)) {
+                low = mid;
+            } else {
+                high = mid;
+            }
+        }
+        return (isX ? currentX : currentY) + sign * low;
+    }
+
+    /**
+     * Checks if player can move there.
+     */
+    private boolean canMoveTo(GameState state, double tryX, double tryY, double fromX, double fromY) {
+        return !CollisionDetector.collidesWithTerrain(state, tryX, tryY)
+                && !CollisionDetector.collidesWithBombs(state, tryX, tryY, fromX, fromY);
     }
 
     /**
@@ -48,8 +85,8 @@ public class GameManager {
         if (!player.isAlive()) return;
         if (!player.canPlaceBomb()) return;
 
-        int row = (int) Math.round(player.getPixelY() / (double) Constants.TILE_SIZE);
-        int col = (int) Math.round(player.getPixelX() / (double) Constants.TILE_SIZE);
+        int row = player.getRow();
+        int col = player.getCol();
 
         if (CollisionDetector.getBombAt(state, row, col) != null) return;
 
@@ -80,18 +117,35 @@ public class GameManager {
 
         // 3. Collision checks
         checkExplosionCollisions(state);
-        // TODO: player vs power-up (pickup)
+        // TODO (teammate C): player vs power-up (pickup)
 
-        // 4. Remove inactive entities
+        // 4. Game progression
+
+        // TODO (teammate C): shrinking map / sudden death / round timer.
+        // Typical Bomberman progression: after ~60s, start marking border tiles
+        // as WALL one per second spiraling inward, forcing players together.
+        // Players standing on a newly-walled tile die.
+        //
+        // You'll need:
+        //   - A round-elapsed-time field on GameState (incremented here each tick)
+        //   - A "next-tile-to-claim" pointer or a spiral coordinate generator
+        //   - Per-tick check: if elapsed time crossed the next threshold, mark
+        //     the next tile as WALL via map.setTile(r, c, Tile.WALL) and kill
+        //     any player(s) standing on it (CollisionDetector.getPlayersAt)
+        //
+        // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
+        // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
+
+        // 5. Remove inactive entities
         state.getBombs().removeIf(b -> !b.isActive());
         state.getExplosions().removeIf(e -> !e.isActive());
         state.getPowerUps().removeIf(p -> !p.isActive());
 
-        // 5. Flush deferred queues
+        // 6. Flush deferred queues
         state.flushQueues();
 
-        // 6. Win/lose check
-        // TODO: check if only one player alive
+        // 7. Win/lose check
+        // TODO (teammate C): check if only one player alive
     }
 
     // Collision checks
@@ -150,7 +204,7 @@ public class GameManager {
                 if (tile == Tile.BOX) {
                     map.setTile(r, c, Tile.FLOOR);
                     state.queueExplosion(new Explosion(r, c));
-                    // TODO: random chance to spawn power-up here
+                    // TODO (teammate C): random chance to spawn power-up here
                     break;
                 }
 

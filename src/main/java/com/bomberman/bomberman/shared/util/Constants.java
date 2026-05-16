@@ -29,4 +29,9 @@ public final class Constants {
 
     // Explosion lifetime
     public static final double EXPLOSION_DURATION_SECONDS = 0.5;
+
+    // Networking
+    public static final int NETWORK_PORT = 54555;
+    public static final int NETWORK_WRITE_BUFFER_SIZE = 32 * 1024;
+    public static final int NETWORK_OBJECT_BUFFER_SIZE = 32 * 1024;
 }
