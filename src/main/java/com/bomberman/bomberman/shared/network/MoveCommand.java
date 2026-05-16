@@ -4,7 +4,6 @@ package com.bomberman.bomberman.shared.network;
  * Sent each frame the client wants to move. dx and dy together form a 2D intent:
  *   dx = -1 (left), 0 (none), 1 (right)
  *   dy = -1 (up),   0 (none), 1 (down)
- * Both nonzero = diagonal. Server normalizes diagonal speed and handles wall sliding per axis.
  */
 public class MoveCommand implements ClientToServerMessage {
     private final int dx;

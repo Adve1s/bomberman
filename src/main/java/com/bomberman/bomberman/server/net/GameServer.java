@@ -97,7 +97,12 @@ public class GameServer {
 
     public void start() throws IOException {
         kryoServer.start();
-        kryoServer.bind(Constants.NETWORK_PORT);
+        try {
+            kryoServer.bind(Constants.NETWORK_PORT);
+        } catch (IOException e) {
+            kryoServer.stop();
+            throw e;
+        }
         previousTickNanos = System.nanoTime();
         tickExecutor.scheduleAtFixedRate(this::tick, 0, TICK_MS, TimeUnit.MILLISECONDS);
         System.out.println("[server] listening on port " + Constants.NETWORK_PORT);
@@ -128,10 +133,9 @@ public class GameServer {
             int[] spawnPosition = SPAWN_POSITIONS[playerId];
             state.addPlayer(new Player(playerId, spawnPosition[0], spawnPosition[1]));
 
-            // First connect starts the game. The log line fires once; the
-            // GameStarted message is sent to every joiner (below) so late
-            // arrivals don't sit on a "waiting" screen.
+            // First connect starts the game. The log line fires once;
             // TODO (teammate A): replace with proper lobby/ready flow.
+            // Don't forget you will need 2+ players to start.
             if (!gameStarted) {
                 gameStarted = true;
                 System.out.println("[server] game started (auto)");
@@ -146,6 +150,7 @@ public class GameServer {
     private void handleDisconnected(Connection connection) {
         // TODO (teammate B): remove the player from GameState (queue via pendingActions),
         // broadcast PlayerLeft, end the game if only one player remains.
+        // Important to remove Player from GameState since we reuse PlayerId
         PlayerSession session = sessionsByConnection.remove(connection.getID());
         if (session != null) {
             System.out.println("[server] player " + session.playerId + " disconnected");
@@ -158,7 +163,10 @@ public class GameServer {
 
         switch (message) {
             // Movement: overwrite-style. Latest intent wins, applied once per tick.
-            case MoveCommand move -> session.pendingMove = move;
+            case MoveCommand move -> session.pendingMove = new MoveCommand(
+                    Integer.signum(move.getDx()),
+                    Integer.signum(move.getDy())
+            );
 
             // Bombs: count style. Every press should fire a placement attempt.
             case PlaceBombCommand placeBomb -> session.pendingBombPresses.incrementAndGet();
@@ -235,7 +243,6 @@ public class GameServer {
         } catch (Exception e) {
             // scheduleAtFixedRate silently cancels the task if a tick throws.
             System.err.println("[server] tick error:");
-            // TODO : Add Better error logging.
             e.printStackTrace();
         }
     }

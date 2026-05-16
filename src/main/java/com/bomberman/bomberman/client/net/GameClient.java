@@ -18,11 +18,6 @@ import java.io.IOException;
  *     once per frame from the AnimationTimer.
  *   - Callbacks (setOnGameStarted etc.) ALSO fire on the network thread. Callers
  *     that touch UI must wrap in Platform.runLater themselves.
- *
- * For teammates extending this
- * Add more callbacks following the {@link #setOnGameStarted} template — see the
- * TODO comments inside {@link #handleReceived} for the natural extension points
- * ({@code onJoinRejected}, {@code onLobbyState}, {@code onGameOver}, {@code onDisconnected}).
  */
 public class GameClient {
 
@@ -83,6 +78,7 @@ public class GameClient {
     // Polled by the FX thread each frame
     public GameState getLatestSnapshot() { return latestSnapshot; }
     public int       getMyPlayerId()     { return myPlayerId; }
+    public  boolean  isGameStarted() { return gameStarted; }
 
     // Callback registration
 
@@ -127,7 +123,7 @@ public class GameClient {
             }
 
             case GameOver gameOver -> {
-                // TODO (teammate A): onGameOver callback for the win/lose screen.
+                // TODO (teammate A): onGameOver callback for the win/lose screen with exit option.
                 if (gameOver.isDraw()) {
                     System.out.println("[client] game over: draw");
                 } else {

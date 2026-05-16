@@ -1,6 +1,5 @@
 package com.bomberman.bomberman.shared.network;
 
-import com.bomberman.bomberman.server.logic.GameManager;
 import com.bomberman.bomberman.shared.entity.Player;
 import com.bomberman.bomberman.shared.model.GameState;
 import com.esotericsoftware.kryo.Kryo;
@@ -77,9 +76,20 @@ class SerializationRoundTripTest {
         }
     }
 
+    /**
+     * Builds a GameState with one player whose stats are deliberately set to
+     * non-default values. This way a serialization bug that silently re-applied
+     * defaults on the receiving end would fail the round-trip tests instead of
+     * sneaking past with "default == default".
+     */
     private GameState freshGameState() {
         GameState state = new GameState();
-        new GameManager().initializeGame(state);
+        Player player = new Player(0, 1, 1);
+        player.setPixelPosition(123.5, 456.25);  // off the default tile-aligned spawn
+        player.addBombCapacity(2);                // max bombs = 3
+        player.addExplosionRange(3);              // range = 4
+        player.addSpeed(1.5);                     // speed = 4.5
+        state.addPlayer(player);
         return state;
     }
 

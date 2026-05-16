@@ -78,7 +78,5 @@ public class NetworkedGameRunner {
         if (snapshot != null) {
             renderer.render(snapshot);
         }
-        // No snapshot yet → canvas stays blank.
-        // TODO (teammate A): "Connecting..." / "Waiting for game start..." overlay.
     }
 }

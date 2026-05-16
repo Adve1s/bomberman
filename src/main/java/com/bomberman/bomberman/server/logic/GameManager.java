@@ -12,12 +12,6 @@ import com.bomberman.bomberman.shared.util.Direction;
  */
 public class GameManager {
 
-    // Game setup
-
-    public void initializeGame(GameState state) {
-        state.addPlayer(new Player(0, 1, 1));
-    }
-
     // Player actions
 
     /**
@@ -91,8 +85,8 @@ public class GameManager {
         if (!player.isAlive()) return;
         if (!player.canPlaceBomb()) return;
 
-        int row = (int) Math.round(player.getPixelY() / (double) Constants.TILE_SIZE);
-        int col = (int) Math.round(player.getPixelX() / (double) Constants.TILE_SIZE);
+        int row = player.getRow();
+        int col = player.getCol();
 
         if (CollisionDetector.getBombAt(state, row, col) != null) return;
 
@@ -123,18 +117,35 @@ public class GameManager {
 
         // 3. Collision checks
         checkExplosionCollisions(state);
-        // TODO: player vs power-up (pickup)
+        // TODO (teammate C): player vs power-up (pickup)
 
-        // 4. Remove inactive entities
+        // 4. Game progression
+
+        // TODO (teammate C): shrinking map / sudden death / round timer.
+        // Typical Bomberman progression: after ~60s, start marking border tiles
+        // as WALL one per second spiraling inward, forcing players together.
+        // Players standing on a newly-walled tile die.
+        //
+        // You'll need:
+        //   - A round-elapsed-time field on GameState (incremented here each tick)
+        //   - A "next-tile-to-claim" pointer or a spiral coordinate generator
+        //   - Per-tick check: if elapsed time crossed the next threshold, mark
+        //     the next tile as WALL via map.setTile(r, c, Tile.WALL) and kill
+        //     any player(s) standing on it (CollisionDetector.getPlayersAt)
+        //
+        // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
+        // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
+
+        // 5. Remove inactive entities
         state.getBombs().removeIf(b -> !b.isActive());
         state.getExplosions().removeIf(e -> !e.isActive());
         state.getPowerUps().removeIf(p -> !p.isActive());
 
-        // 5. Flush deferred queues
+        // 6. Flush deferred queues
         state.flushQueues();
 
-        // 6. Win/lose check
-        // TODO: check if only one player alive
+        // 7. Win/lose check
+        // TODO (teammate C): check if only one player alive
     }
 
     // Collision checks
@@ -193,7 +204,7 @@ public class GameManager {
                 if (tile == Tile.BOX) {
                     map.setTile(r, c, Tile.FLOOR);
                     state.queueExplosion(new Explosion(r, c));
-                    // TODO: random chance to spawn power-up here
+                    // TODO (teammate C): random chance to spawn power-up here
                     break;
                 }
 
