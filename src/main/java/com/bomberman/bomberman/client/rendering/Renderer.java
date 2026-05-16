@@ -28,7 +28,9 @@ public class Renderer {
     // Entity colors
     private static final Color COLOR_BOMB       = Color.rgb(30, 30, 30);
     private static final Color COLOR_EXPLOSION   = Color.rgb(255, 100, 30);
-    private static final Color COLOR_POWERUP     = Color.rgb(255, 215, 0);
+    private static final Color COLOR_POWERUP_BOMB  = Color.rgb(255, 140, 90);
+    private static final Color COLOR_POWERUP_SPEED = Color.rgb(90, 200, 255);
+    private static final Color COLOR_POWERUP_RANGE = Color.rgb(180, 120, 255);
     private static final Color COLOR_PLAYER_DEAD = Color.rgb(100, 100, 100);
 
     // Player colors by ID (supports up to 4 players)
@@ -100,7 +102,12 @@ public class Renderer {
         for (PowerUpView powerUp : state.getPowerUpViews()) {
             if (!powerUp.isActive()) continue;
 
-            graphicsContext.setFill(COLOR_POWERUP);
+            switch (powerUp.getType()) {
+                case EXTRA_BOMB -> graphicsContext.setFill(COLOR_POWERUP_BOMB);
+                case SPEED_BOOST -> graphicsContext.setFill(COLOR_POWERUP_SPEED);
+                case EXTRA_RANGE -> graphicsContext.setFill(COLOR_POWERUP_RANGE);
+            }
+
             graphicsContext.fillOval(
                     powerUp.getPixelX() + POWERUP_PADDING,
                     powerUp.getPixelY() + POWERUP_PADDING,

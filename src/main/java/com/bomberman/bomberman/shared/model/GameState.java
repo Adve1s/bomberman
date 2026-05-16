@@ -69,9 +69,7 @@ public class GameState implements GameStateView {
     }
 
     @Override
-    public boolean isGameOver() {
-        return gameOver;
-    }
+    public boolean isGameOver() { return gameOver; }
 
     // Full access (server-side only)
 

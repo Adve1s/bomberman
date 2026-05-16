@@ -204,7 +204,26 @@ public class GameManager {
                 if (tile == Tile.BOX) {
                     map.setTile(r, c, Tile.FLOOR);
                     state.queueExplosion(new Explosion(r, c));
-                    // TODO (teammate C): random chance to spawn power-up here
+
+                    double spawnChance = 0.3;
+                    double typeRoll = Math.random();
+
+                    if (typeRoll <= spawnChance){
+                        double type = (int)(Math.random() * 3);
+                        PowerUp.PowerUpType powerUpType;
+
+                        if (type == 0){
+                            powerUpType = PowerUp.PowerUpType.EXTRA_BOMB;
+                        } else if (type == 1){
+                            powerUpType = PowerUp.PowerUpType.EXTRA_RANGE;
+                        } else {
+                            powerUpType = PowerUp.PowerUpType.SPEED_BOOST;
+                        }
+
+                        PowerUp powerUp = new PowerUp(powerUpType, r, c);
+                        state.queuePowerUp(powerUp);
+                    }
+
                     break;
                 }
 
