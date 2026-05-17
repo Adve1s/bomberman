@@ -106,6 +106,12 @@ public class GameApp extends Application {
         client = new GameClient(name);
         client.setOnGameStarted(() -> Platform.runLater(this::switchToGameScene));
 
+        client.setOnJoinRejected(reason ->
+                Platform.runLater(() ->
+                        returnToMenu(host, name, "Rejected: " + reason)
+                )
+        );
+
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
         Thread connectThread = new Thread(() -> {
             try {

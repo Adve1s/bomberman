@@ -8,6 +8,7 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 /**
  * Owns the network connection to a GameServer. Sends commands; stores the latest
@@ -38,6 +39,9 @@ public class GameClient {
     // Callback hooks. volatile because written on the FX thread (during wiring)
     // and read on the network thread (when the message arrives).
     private volatile Runnable onGameStartedCallback;
+    private volatile Consumer<String> onJoinRejectedCallback;
+
+
 
     public GameClient(String playerName) {
         this.playerName = playerName;
@@ -91,6 +95,15 @@ public class GameClient {
         this.onGameStartedCallback = callback;
     }
 
+    /**
+     * Sets a callback to run when the server rejects a join request.
+     * The callback receives the rejection reason.
+     * Threading: the callback fires on the network thread, not the FX
+     * thread. If it touches the UI, wrap the body in {@code Platform.runLater}.
+     */
+    public void setOnJoinRejected(Consumer<String> callback) { this.onJoinRejectedCallback = callback; }
+
+
     // Network thread
 
     private void handleReceived(NetworkMessage message) {
@@ -104,14 +117,8 @@ public class GameClient {
             }
 
             case JoinRejected joinRejected -> {
-                // TODO (teammate A): fire an onJoinRejected callback. Pattern:
-                // declare:
-                //   private volatile Consumer<String> onJoinRejectedCallback;
-                // Setter:
-                //   public void setOnJoinRejected(Consumer<String> cb) { this.onJoinRejectedCallback = cb; }
-                // And here:
-                //     Consumer<String> cb = this.onJoinRejectedCallback;
-                //     if (cb != null) cb.accept(joinRejected.getReason());
+                Consumer<String> cb = this.onJoinRejectedCallback;
+                if (cb != null) cb.accept(joinRejected.getReason());
                 System.err.println("[client] join rejected: " + joinRejected.getReason());
             }
 
@@ -133,6 +140,7 @@ public class GameClient {
 
             case LobbyState lobbyState -> {
                 // TODO (teammate A): onLobbyState callback to refresh the lobby UI.
+                //
                 System.out.println("[client] LobbyState received (TODO teammate A)");
             }
 
