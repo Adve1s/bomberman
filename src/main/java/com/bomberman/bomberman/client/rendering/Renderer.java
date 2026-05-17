@@ -21,8 +21,22 @@ import javafx.scene.paint.Color;
 public class Renderer {
 
     // Tile colors
-    private static final Color COLOR_FLOOR = Color.rgb(140, 180, 100);
-    private static final Color COLOR_WALL  = Color.rgb(80, 80, 80);
+    private static final Color COLOR_FLOOR = Color.rgb(95, 155, 75);
+    private static final Color COLOR_GRASS_DARK = Color.rgb(65, 120, 55);
+    private static final Color COLOR_GRASS_LIGHT = Color.rgb(120, 180, 90);
+
+    private static final Color COLOR_ROCK_BASE = Color.rgb(135, 140, 135);
+    private static final Color COLOR_ROCK_DARK = Color.rgb(95, 100, 95);
+    private static final Color COLOR_ROCK_LIGHT = Color.rgb(185, 190, 180);
+
+    private static final Color COLOR_STONE_GROUND = Color.rgb(150, 155, 150);
+    private static final Color COLOR_STONE_GROUND_DARK = Color.rgb(125, 130, 125);
+    private static final Color COLOR_STONE_GROUND_LIGHT = Color.rgb(175, 180, 175);
+
+    private static final Color COLOR_BUSH_BASE = Color.rgb(55, 105, 45);
+    private static final Color COLOR_BUSH_DARK = Color.rgb(35, 80, 30);
+    private static final Color COLOR_BUSH_LIGHT = Color.rgb(75, 135, 60);
+
     private static final Color COLOR_BOX   = Color.rgb(180, 130, 70);
 
     // Entity colors
@@ -78,7 +92,7 @@ public class Renderer {
                 Tile tile = map.getTile(row, col);
 
                 switch (tile) {
-                    case WALL  -> graphicsContext.setFill(COLOR_WALL);
+                    case WALL  -> graphicsContext.setFill(COLOR_ROCK_BASE);
                     case BOX   -> graphicsContext.setFill(COLOR_BOX);
                     case FLOOR -> graphicsContext.setFill(COLOR_FLOOR);
                 }
@@ -87,11 +101,161 @@ public class Renderer {
                 double y = row * Constants.TILE_SIZE;
 
                 graphicsContext.fillRect(x, y, Constants.TILE_SIZE, Constants.TILE_SIZE);
+                if (tile == Tile.FLOOR) {
+                    drawPixelGrassDetails(x, y, row, col);
+                }
+                if (tile == Tile.WALL) {
+                    if (isOuterBorderTile(map, row, col)) {
+                        drawBushWall(x, y, row, col);
+                    } else {
+                        drawRockWall(x, y, row, col);
+                    }
+                }
 
                 graphicsContext.setStroke(GRID_LINE_COLOR);
                 graphicsContext.strokeRect(x, y, Constants.TILE_SIZE, Constants.TILE_SIZE);
             }
         }
+    }
+
+    private boolean isOuterBorderTile(GameMapView map, int row, int col) {
+        return row == 0 || col == 0 || row == map.getRows() - 1 || col == map.getCols() - 1;
+    }
+
+    private void drawPixelGrassDetails(double x, double y, int row, int col) {
+        int gridSize = 8;
+        double cell = Constants.TILE_SIZE / (double) gridSize;
+
+        for (int gy = 0; gy < gridSize; gy++) {
+            for (int gx = 0; gx < gridSize; gx++) {
+
+                int hash = row * 73856093
+                        ^ col * 19349663
+                        ^ gx * 83492791
+                        ^ gy * 1234567;
+
+                hash = Math.abs(hash);
+                int value = hash % 100;
+
+                if (value < 12) {
+                    graphicsContext.setFill(COLOR_GRASS_DARK);
+                    graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
+                } else if (value < 24) {
+                    graphicsContext.setFill(COLOR_GRASS_LIGHT);
+                    graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
+                }
+            }
+        }
+    }
+
+    private void drawRockWall(double x, double y, int row, int col) {
+        double size = Constants.TILE_SIZE;
+
+        graphicsContext.setFill(COLOR_STONE_GROUND);
+        graphicsContext.fillRect(x, y, size, size);
+        drawStoneGroundDetails(x, y, row, col);
+
+        int variant = Math.abs(row * 31 + col * 17) % 3;
+
+        double rockX;
+        double rockY;
+        double rockW;
+        double rockH;
+
+        if (variant == 0) {
+            rockX = x + size * 0.08;
+            rockY = y + size * 0.10;
+            rockW = size * 0.84;
+            rockH = size * 0.78;
+        } else if (variant == 1) {
+            rockX = x + size * 0.10;
+            rockY = y + size * 0.12;
+            rockW = size * 0.80;
+            rockH = size * 0.76;
+        } else {
+            rockX = x + size * 0.12;
+            rockY = y + size * 0.08;
+            rockW = size * 0.78;
+            rockH = size * 0.82;
+        }
+
+        graphicsContext.setFill(COLOR_ROCK_DARK);
+        graphicsContext.fillRoundRect(
+                rockX + size * 0.03,
+                rockY + size * 0.04,
+                rockW,
+                rockH,
+                14,
+                14
+        );
+
+        graphicsContext.setFill(COLOR_ROCK_BASE);
+        graphicsContext.fillRoundRect(
+                rockX,
+                rockY,
+                rockW,
+                rockH,
+                14,
+                14
+        );
+
+        graphicsContext.setFill(COLOR_ROCK_LIGHT);
+        graphicsContext.fillOval(
+                rockX + rockW * 0.16,
+                rockY + rockH * 0.15,
+                rockW * 0.22,
+                rockH * 0.16
+        );
+
+        graphicsContext.setFill(COLOR_ROCK_DARK);
+        graphicsContext.fillOval(
+                rockX + rockW * 0.58,
+                rockY + rockH * 0.52,
+                rockW * 0.18,
+                rockH * 0.14
+        );
+    }
+
+    private void drawStoneGroundDetails(double x, double y, int row, int col) {
+        int gridSize = 8;
+        double cell = Constants.TILE_SIZE / (double) gridSize;
+
+        for (int gy = 0; gy < gridSize; gy++) {
+            for (int gx = 0; gx < gridSize; gx++) {
+                int hash = row * 73856093
+                        ^ col * 19349663
+                        ^ gx * 83492791
+                        ^ gy * 1234567;
+
+                hash = Math.abs(hash);
+                int value = hash % 100;
+
+                if (value < 10) {
+                    graphicsContext.setFill(COLOR_STONE_GROUND_DARK);
+                    graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
+                } else if (value < 20) {
+                    graphicsContext.setFill(COLOR_STONE_GROUND_LIGHT);
+                    graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
+                }
+            }
+        }
+    }
+
+    private void drawBushWall(double x, double y, int row, int col) {
+        double size = Constants.TILE_SIZE;
+
+        graphicsContext.setFill(COLOR_BUSH_BASE);
+        graphicsContext.fillRect(x, y, size, size);
+
+        graphicsContext.setFill(COLOR_BUSH_DARK);
+        graphicsContext.fillOval(x + size * 0.05, y + size * 0.20, size * 0.45, size * 0.45);
+        graphicsContext.fillOval(x + size * 0.35, y + size * 0.10, size * 0.45, size * 0.45);
+        graphicsContext.fillOval(x + size * 0.20, y + size * 0.40, size * 0.50, size * 0.40);
+
+        graphicsContext.setFill(COLOR_BUSH_LIGHT);
+        graphicsContext.fillOval(x + size * 0.15, y + size * 0.18, size * 0.18, size * 0.18);
+        graphicsContext.fillOval(x + size * 0.52, y + size * 0.22, size * 0.16, size * 0.16);
+        graphicsContext.fillOval(x + size * 0.35, y + size * 0.50, size * 0.14, size * 0.14);
     }
 
     // Entities
