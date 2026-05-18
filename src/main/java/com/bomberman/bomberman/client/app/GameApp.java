@@ -49,6 +49,7 @@ public class GameApp extends Application {
     private NetworkedGameRunner runner;
     private GameServer inProcessServer; // non-null only when user chose Host
     private LobbyState latestLobbyState;
+    private String lastName = "";
 
     @Override
     public void start(Stage stage) {
@@ -73,9 +74,6 @@ public class GameApp extends Application {
     private void shutdown() {
         if (runner != null)          { runner.stop();            runner = null; }
         if (client != null)          { client.disconnect();      client = null; }
-
-        // TODO: Decide expected behavior when the host leaves an in-process lobby.
-        // Current behavior: stopping the host client also stops the embedded server.
         if (inProcessServer != null) { inProcessServer.stop();   inProcessServer = null; }
     }
 
@@ -107,6 +105,7 @@ public class GameApp extends Application {
      *   3. Kick off the network call on a background thread
      */
     private void joinGame(String host, String name) {
+        this.lastName = name;
         stage.setTitle("Bomberman — " + name + " → " + host);
 
         // (1) transitional screen
@@ -170,8 +169,7 @@ public class GameApp extends Application {
                 client.getMyPlayerId(),
                 () -> client.send(new ReadyCommand(true)),
                 () -> client.send(new StartGameCommand()),
-                // TODO: preserve host/name when leaving the lobby so the menu stays pre-filled.
-                () -> returnToMenu("", "", null)
+                () -> returnToMenu("", lastName, null)
         ));
     }
 
@@ -196,7 +194,7 @@ public class GameApp extends Application {
 
         scene.setRoot(GameOverScreen.create(
                 message,
-                () -> returnToMenu("", "", null)
+                () -> returnToMenu("", lastName, null)
         ));
     }
 
