@@ -1,11 +1,13 @@
 package com.bomberman.bomberman.client.app;
 
 import com.bomberman.bomberman.client.menu.ConnectingScreen;
+import com.bomberman.bomberman.client.menu.GameOverScreen;
 import com.bomberman.bomberman.client.menu.LobbyScreen;
 import com.bomberman.bomberman.client.menu.MainMenu;
 import com.bomberman.bomberman.client.net.GameClient;
 import com.bomberman.bomberman.client.runner.NetworkedGameRunner;
 import com.bomberman.bomberman.server.net.GameServer;
+import com.bomberman.bomberman.shared.network.GameOver;
 import com.bomberman.bomberman.shared.network.LobbyState;
 import com.bomberman.bomberman.shared.network.ReadyCommand;
 import com.bomberman.bomberman.shared.network.StartGameCommand;
@@ -123,6 +125,10 @@ public class GameApp extends Application {
                 Platform.runLater(() -> showLobby(state))
         );
 
+        client.setOnGameOver(gameOver ->
+                Platform.runLater(() -> showGameOver(gameOver))
+        );
+
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
         Thread connectThread = new Thread(() -> {
             try {
@@ -163,6 +169,17 @@ public class GameApp extends Application {
                 () -> client.send(new ReadyCommand(true)),
                 () -> client.send(new StartGameCommand()),
                 // TODO: preserve host/name when leaving the lobby so the menu stays pre-filled.
+                () -> returnToMenu("", "", null)
+        ));
+    }
+
+    private void showGameOver(GameOver gameOver) {
+        String message = gameOver.isDraw()
+                ? "Draw"
+                : "Player " + gameOver.getWinnerPlayerId() + " wins";
+
+        scene.setRoot(GameOverScreen.create(
+                message,
                 () -> returnToMenu("", "", null)
         ));
     }

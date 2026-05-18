@@ -41,6 +41,7 @@ public class GameClient {
     private volatile Runnable onGameStartedCallback;
     private volatile Consumer<String> onJoinRejectedCallback;
     private volatile Consumer<LobbyState> onLobbyStateCallback;
+    private volatile Consumer<GameOver> onGameOverCallback;
 
     public GameClient(String playerName) {
         this.playerName = playerName;
@@ -112,6 +113,16 @@ public class GameClient {
         this.onLobbyStateCallback = callback;
     }
 
+    /**
+     * Sets a callback to run when the server sends GameOver.
+     * The callback receives the game-over message.
+     * Threading: the callback fires on the network thread, not the FX
+     * thread. If it touches the UI, wrap the body in {@code Platform.runLater}.
+     */
+    public void setOnGameOver(Consumer<GameOver> callback) {
+        this.onGameOverCallback = callback;
+    }
+
     // Network thread
 
     private void handleReceived(NetworkMessage message) {
@@ -138,7 +149,9 @@ public class GameClient {
             }
 
             case GameOver gameOver -> {
-                // TODO (teammate A): onGameOver callback for the win/lose screen with exit option.
+                Consumer<GameOver> cb = this.onGameOverCallback;
+                if (cb != null) cb.accept(gameOver);
+
                 if (gameOver.isDraw()) {
                     System.out.println("[client] game over: draw");
                 } else {
