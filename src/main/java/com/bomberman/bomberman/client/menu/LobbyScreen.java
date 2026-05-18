@@ -5,6 +5,7 @@ import javafx.scene.control.Button;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
@@ -92,11 +93,20 @@ import java.util.List;
  */
 public class LobbyScreen {
 
-    public static Parent create(LobbyState state, int myPlayerId, Runnable onReadyToggled, Runnable onStartClicked, Runnable onLeaveClicked) {
-        Label title = new Label("Lobby");
-        title.setStyle("-fx-font-size: 24px;");
+    public static Parent create(
+            LobbyState state,
+            int myPlayerId,
+            Runnable onReadyToggled,
+            Runnable onStartClicked,
+            Runnable onLeaveClicked
+    ) {
+        Label title = new Label("BOMBERMAN");
+        title.setStyle("-fx-font-size: 48px; -fx-font-weight: bold;");
 
-        VBox playersBox = new VBox(5);
+        Label subtitle = new Label("Lobby");
+        subtitle.setStyle("-fx-font-size: 24px;");
+
+        VBox playersBox = new VBox(8);
         playersBox.setAlignment(Pos.CENTER);
 
         List<String> playerNames = state.getPlayerNames();
@@ -105,29 +115,37 @@ public class LobbyScreen {
         for (int i = 0; i < playerNames.size(); i++) {
             String playerName = playerNames.get(i);
             boolean ready = readyStates.get(i);
-
             String status = ready ? "Ready" : "Not ready";
 
-            Label playerLabel = new Label(playerName + " - " + status);
+            Label playerLabel = new Label(playerName + " (" + status + ")");
             playerLabel.setStyle("-fx-font-size: 16px;");
-
             playersBox.getChildren().add(playerLabel);
         }
 
-        Button readyButton = new Button("Ready");
+        // Used to disable the Ready button once this player is marked ready.
+        boolean amReady = readyStates.get(myPlayerId);
+
+        Button readyButton = new Button(amReady ? "Ready!" : "Ready");
+        readyButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
+        readyButton.setDisable(amReady);
         readyButton.setOnAction(event -> onReadyToggled.run());
 
         Button leaveButton = new Button("Leave");
+        leaveButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
         leaveButton.setOnAction(event -> onLeaveClicked.run());
 
-        VBox layout = new VBox(15, title, playersBox, readyButton, leaveButton);
-        layout.setAlignment(Pos.CENTER);
+        HBox buttons = new HBox(20, readyButton, leaveButton);
+        buttons.setAlignment(Pos.CENTER);
 
         if (state.getHostPlayerId() == myPlayerId) {
             Button startButton = new Button("Start");
+            startButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
             startButton.setOnAction(event -> onStartClicked.run());
-            layout.getChildren().add(startButton);
+            buttons.getChildren().add(startButton);
         }
+
+        VBox layout = new VBox(20, title, subtitle, playersBox, buttons);
+        layout.setAlignment(Pos.CENTER);
 
         return layout;
     }
