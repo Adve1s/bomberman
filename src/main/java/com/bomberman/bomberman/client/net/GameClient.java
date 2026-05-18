@@ -40,8 +40,7 @@ public class GameClient {
     // and read on the network thread (when the message arrives).
     private volatile Runnable onGameStartedCallback;
     private volatile Consumer<String> onJoinRejectedCallback;
-
-
+    private volatile Consumer<LobbyState> onLobbyStateCallback;
 
     public GameClient(String playerName) {
         this.playerName = playerName;
@@ -103,6 +102,15 @@ public class GameClient {
      */
     public void setOnJoinRejected(Consumer<String> callback) { this.onJoinRejectedCallback = callback; }
 
+    /**
+     * Sets a callback to run when the server sends LobbyState.
+     * The callback receives the latest lobby state.
+     * Threading: the callback fires on the network thread, not the FX
+     * thread. If it touches the UI, wrap the body in {@code Platform.runLater}.
+     */
+    public void setOnLobbyState(Consumer<LobbyState> callback) {
+        this.onLobbyStateCallback = callback;
+    }
 
     // Network thread
 
@@ -139,9 +147,10 @@ public class GameClient {
             }
 
             case LobbyState lobbyState -> {
-                // TODO (teammate A): onLobbyState callback to refresh the lobby UI.
-                //
-                System.out.println("[client] LobbyState received (TODO teammate A)");
+                Consumer<LobbyState> cb = this.onLobbyStateCallback;
+                if (cb != null) cb.accept(lobbyState);
+
+                System.out.println("[client] LobbyState received");
             }
 
             case PlayerLeft playerLeft ->

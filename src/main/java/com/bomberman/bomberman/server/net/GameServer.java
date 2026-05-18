@@ -10,9 +10,7 @@ import com.esotericsoftware.kryonet.Listener;
 import com.esotericsoftware.kryonet.Server;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
@@ -132,18 +130,9 @@ public class GameServer {
         pendingActions.add(() -> {
             int[] spawnPosition = SPAWN_POSITIONS[playerId];
             state.addPlayer(new Player(playerId, spawnPosition[0], spawnPosition[1]));
-
-            // First connect starts the game. The log line fires once;
-            // TODO (teammate A): replace with proper lobby/ready flow.
-            // Don't forget you will need 2+ players to start.
-            if (!gameStarted) {
-                gameStarted = true;
-                System.out.println("[server] game started (auto)");
-            }
         });
 
         connection.sendTCP(new JoinAccepted(playerId));
-        connection.sendTCP(new GameStarted()); // every joiner, including late ones
         System.out.println("[server] player " + playerId + " connected from " + connection.getRemoteAddressTCP());
     }
 
@@ -154,6 +143,9 @@ public class GameServer {
         PlayerSession session = sessionsByConnection.remove(connection.getID());
         if (session != null) {
             System.out.println("[server] player " + session.playerId + " disconnected");
+
+            // Refresh lobby for remaining clients after someone leaves
+            broadcastLobbyState();
         }
     }
 
@@ -174,7 +166,7 @@ public class GameServer {
             case JoinRequest joinRequest -> {
                 session.name = joinRequest.getPlayerName();
                 System.out.println("[server] player " + session.playerId + " name: " + joinRequest.getPlayerName());
-                // TODO (teammate A): broadcast LobbyState now that names are tracked.
+                broadcastLobbyState();
             }
 
             case Ping ping -> {
@@ -182,11 +174,39 @@ public class GameServer {
             }
 
             case ReadyCommand ready -> {
-                // TODO (teammate A): lobby ready-state tracking.
+                session.ready = ready.isReady();
+                System.out.println("[server] player " + session.playerId + " ready: " + session.ready);
+                broadcastLobbyState();
             }
 
             case StartGameCommand startGame -> {
-                // TODO (teammate A): host-only start-game flow (currently auto-starts).
+                // The host is the connected player with the lowest playerId.
+                int hostPlayerId = sessionsByConnection.values().stream()
+                        .mapToInt(s -> s.playerId)
+                        .min()
+                        .orElse(-1);
+
+                if (session.playerId != hostPlayerId) {
+                    System.out.println("[server] player " + session.playerId + " tried to start game but is not host");
+                    return;
+                }
+
+                if (sessionsByConnection.size() < 2) {
+                    System.out.println("[server] cannot start: need at least 2 players");
+                    return;
+                }
+
+                boolean everyoneReady = sessionsByConnection.values().stream()
+                        .allMatch(s -> s.ready);
+
+                if (!everyoneReady) {
+                    System.out.println("[server] cannot start: not everyone is ready");
+                    return;
+                }
+
+                gameStarted = true;
+                kryoServer.sendToAllTCP(new GameStarted());
+                System.out.println("[server] game started");
             }
 
             default -> { /* other message types — ignore */ }
@@ -249,6 +269,25 @@ public class GameServer {
 
     // Helpers
 
+    private void broadcastLobbyState() {
+        List<String> playerNames = sessionsByConnection.values().stream()
+                .map(session -> session.name)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        List<Boolean> readyStates = sessionsByConnection.values().stream()
+                .map(session -> session.ready)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        int hostPlayerId = sessionsByConnection.values().stream()
+                .mapToInt(session -> session.playerId)
+                .min()
+                .orElse(-1);
+
+        kryoServer.sendToAllTCP(new LobbyState(playerNames, readyStates, hostPlayerId));
+
+        System.out.println("[server] lobby state broadcast: " + playerNames);
+    }
+
     private int nextAvailablePlayerId() {
         Set<Integer> taken = sessionsByConnection.values().stream()
                 .map(s -> s.playerId)
@@ -272,6 +311,7 @@ public class GameServer {
         final int playerId;
         final Connection connection;
         String name = "Player";
+        volatile boolean ready = false;
 
         /** Latest movement intent. volatile: written on net thread, read on tick thread. */
         volatile MoveCommand pendingMove;

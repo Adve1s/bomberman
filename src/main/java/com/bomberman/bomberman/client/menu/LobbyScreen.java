@@ -1,9 +1,13 @@
 package com.bomberman.bomberman.client.menu;
 
+import com.bomberman.bomberman.shared.network.LobbyState;
+import javafx.scene.control.Button;
 import javafx.geometry.Pos;
 import javafx.scene.Parent;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
+
+import java.util.List;
 
 /**
  *  TODO (Teammate A) - Set up LobbyScreen
@@ -88,12 +92,43 @@ import javafx.scene.layout.VBox;
  */
 public class LobbyScreen {
 
-    public static Parent create() {
-        Label label = new Label("Lobby (TODO teammate A)");
-        label.setStyle("-fx-font-size: 20px;");
+    public static Parent create(LobbyState state, int myPlayerId, Runnable onReadyToggled, Runnable onStartClicked, Runnable onLeaveClicked) {
+        Label title = new Label("Lobby");
+        title.setStyle("-fx-font-size: 24px;");
 
-        VBox layout = new VBox(label);
+        VBox playersBox = new VBox(5);
+        playersBox.setAlignment(Pos.CENTER);
+
+        List<String> playerNames = state.getPlayerNames();
+        List<Boolean> readyStates = state.getReadyStates();
+
+        for (int i = 0; i < playerNames.size(); i++) {
+            String playerName = playerNames.get(i);
+            boolean ready = readyStates.get(i);
+
+            String status = ready ? "Ready" : "Not ready";
+
+            Label playerLabel = new Label(playerName + " - " + status);
+            playerLabel.setStyle("-fx-font-size: 16px;");
+
+            playersBox.getChildren().add(playerLabel);
+        }
+
+        Button readyButton = new Button("Ready");
+        readyButton.setOnAction(event -> onReadyToggled.run());
+
+        Button leaveButton = new Button("Leave");
+        leaveButton.setOnAction(event -> onLeaveClicked.run());
+
+        VBox layout = new VBox(15, title, playersBox, readyButton, leaveButton);
         layout.setAlignment(Pos.CENTER);
+
+        if (state.getHostPlayerId() == myPlayerId) {
+            Button startButton = new Button("Start");
+            startButton.setOnAction(event -> onStartClicked.run());
+            layout.getChildren().add(startButton);
+        }
+
         return layout;
     }
 }

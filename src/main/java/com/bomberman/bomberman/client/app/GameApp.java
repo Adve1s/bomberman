@@ -1,10 +1,14 @@
 package com.bomberman.bomberman.client.app;
 
 import com.bomberman.bomberman.client.menu.ConnectingScreen;
+import com.bomberman.bomberman.client.menu.LobbyScreen;
 import com.bomberman.bomberman.client.menu.MainMenu;
 import com.bomberman.bomberman.client.net.GameClient;
 import com.bomberman.bomberman.client.runner.NetworkedGameRunner;
 import com.bomberman.bomberman.server.net.GameServer;
+import com.bomberman.bomberman.shared.network.LobbyState;
+import com.bomberman.bomberman.shared.network.ReadyCommand;
+import com.bomberman.bomberman.shared.network.StartGameCommand;
 import com.bomberman.bomberman.shared.util.Constants;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -66,6 +70,9 @@ public class GameApp extends Application {
     private void shutdown() {
         if (runner != null)          { runner.stop();            runner = null; }
         if (client != null)          { client.disconnect();      client = null; }
+
+        // TODO: Decide expected behavior when the host leaves an in-process lobby.
+        // Current behavior: stopping the host client also stops the embedded server.
         if (inProcessServer != null) { inProcessServer.stop();   inProcessServer = null; }
     }
 
@@ -112,6 +119,10 @@ public class GameApp extends Application {
                 )
         );
 
+        client.setOnLobbyState(state ->
+                Platform.runLater(() -> showLobby(state))
+        );
+
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
         Thread connectThread = new Thread(() -> {
             try {
@@ -143,6 +154,17 @@ public class GameApp extends Application {
         shutdown();
         stage.setTitle("Bomberman");
         scene.setRoot(MainMenu.create(this::joinGame, this::hostGame, lastHost, lastName, errorMessage));
+    }
+
+    private void showLobby(LobbyState state) {
+        scene.setRoot(LobbyScreen.create(
+                state,
+                client.getMyPlayerId(),
+                () -> client.send(new ReadyCommand(true)),
+                () -> client.send(new StartGameCommand()),
+                // TODO: preserve host/name when leaving the lobby so the menu stays pre-filled.
+                () -> returnToMenu("", "", null)
+        ));
     }
 
     // Defaults / CLI args

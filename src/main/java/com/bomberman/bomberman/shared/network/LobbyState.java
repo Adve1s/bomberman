@@ -11,15 +11,22 @@ import java.util.List;
  */
 public class LobbyState implements ServerToClientMessage {
     private final List<String> playerNames;
+    private final List<Boolean> readyStates;
     private final int hostPlayerId;
 
-    public LobbyState(List<String> playerNames, int hostPlayerId) {
+
+    public LobbyState(List<String> playerNames, List<Boolean> readyStates, int hostPlayerId) {
         this.playerNames = playerNames;
+        this.readyStates = readyStates;
         this.hostPlayerId = hostPlayerId;
     }
 
     public List<String> getPlayerNames() {
         return playerNames;
+    }
+
+    public List<Boolean> getReadyStates() {
+        return readyStates;
     }
 
     public int getHostPlayerId() {
