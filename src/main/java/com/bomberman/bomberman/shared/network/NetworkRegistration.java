@@ -40,6 +40,9 @@ public final class NetworkRegistration {
         kryo.register(Tile[].class);
         kryo.register(Tile[][].class);
 
+        // Warning wall
+        kryo.register(WarningTile.class);
+
         // Collection
         kryo.register(ArrayList.class);
 

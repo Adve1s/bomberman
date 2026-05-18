@@ -1,9 +1,7 @@
 package com.bomberman.bomberman.client.rendering;
 
 import com.bomberman.bomberman.shared.entity.*;
-import com.bomberman.bomberman.shared.model.GameMapView;
-import com.bomberman.bomberman.shared.model.GameStateView;
-import com.bomberman.bomberman.shared.model.Tile;
+import com.bomberman.bomberman.shared.model.*;
 import com.bomberman.bomberman.shared.util.Constants;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -24,6 +22,7 @@ public class Renderer {
     private static final Color COLOR_FLOOR = Color.rgb(140, 180, 100);
     private static final Color COLOR_WALL  = Color.rgb(80, 80, 80);
     private static final Color COLOR_BOX   = Color.rgb(180, 130, 70);
+    private static final Color COLOR_WARNING_WALL  = Color.rgb(80, 80, 80, 0.6);
 
     // Entity colors
     private static final Color COLOR_BOMB       = Color.rgb(30, 30, 30);
@@ -66,6 +65,7 @@ public class Renderer {
         graphicsContext.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         drawTiles(state.getGameMapView());
+        drawWarningWalls(state);
         drawPowerUps(state);
         drawBombs(state);
         drawExplosions(state);
@@ -80,7 +80,7 @@ public class Renderer {
                 Tile tile = map.getTile(row, col);
 
                 switch (tile) {
-                    case WALL  -> graphicsContext.setFill(COLOR_WALL);
+                    case WALL -> graphicsContext.setFill(COLOR_WALL);
                     case BOX   -> graphicsContext.setFill(COLOR_BOX);
                     case FLOOR -> graphicsContext.setFill(COLOR_FLOOR);
                 }
@@ -93,6 +93,30 @@ public class Renderer {
                 graphicsContext.setStroke(GRID_LINE_COLOR);
                 graphicsContext.strokeRect(x, y, Constants.TILE_SIZE, Constants.TILE_SIZE);
             }
+        }
+    }
+
+    // Waning wall blinking
+
+    private void drawWarningWalls(GameStateView state) {
+        double phase = (state.getRoundTime() * 4) % 1.3;
+        boolean blink = phase < 0.5;
+
+        if (!blink) return;
+
+        graphicsContext.setFill(COLOR_WARNING_WALL);
+
+        for (WarningTileView tile : state.getWarningTiles()) {
+
+            double x = tile.getCol() * Constants.TILE_SIZE;
+            double y = tile.getRow() * Constants.TILE_SIZE;
+
+            graphicsContext.fillRect(
+                    x,
+                    y,
+                    Constants.TILE_SIZE,
+                    Constants.TILE_SIZE
+            );
         }
     }
 

@@ -4,8 +4,10 @@ import com.bomberman.bomberman.shared.entity.*;
 import com.bomberman.bomberman.shared.model.GameMap;
 import com.bomberman.bomberman.shared.model.GameState;
 import com.bomberman.bomberman.shared.model.Tile;
+import com.bomberman.bomberman.shared.model.WarningTile;
 import com.bomberman.bomberman.shared.util.Constants;
 import com.bomberman.bomberman.shared.util.Direction;
+import java.util.Iterator;
 
 /**
  * The game brain. Runs all game logic against a GameState.
@@ -102,6 +104,7 @@ public class GameManager {
      */
     public void update(GameState state, double deltaTime) {
         if (state.isGameOver()) return;
+        state.addRoundTime(deltaTime);
 
         // 1. Update all entities (player syncs grid pos, bombs tick, explosions fade)
         state.getPlayers().forEach(p -> p.update(deltaTime));
@@ -122,21 +125,8 @@ public class GameManager {
         checkPowerUpCollisions(state);
 
         // 5. Game progression
-
-        // TODO (teammate C): shrinking map / sudden death / round timer.
-        // Typical Bomberman progression: after ~60s, start marking border tiles
-        // as WALL one per second spiraling inward, forcing players together.
-        // Players standing on a newly-walled tile die.
-        //
-        // You'll need:
-        //   - A round-elapsed-time field on GameState (incremented here each tick)
-        //   - A "next-tile-to-claim" pointer or a spiral coordinate generator
-        //   - Per-tick check: if elapsed time crossed the next threshold, mark
-        //     the next tile as WALL via map.setTile(r, c, Tile.WALL) and kill
-        //     any player(s) standing on it (CollisionDetector.getPlayersAt)
-        //
-        // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
-        // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
+        updateGameProgression(state);
+        updateWarningTiles(state);
 
         // 6. Remove inactive entities
         state.getBombs().removeIf(b -> !b.isActive());
@@ -188,6 +178,127 @@ public class GameManager {
 
                     powerUp.destroy();
                 }
+            }
+        }
+    }
+
+    // Game progression
+
+    // Typical Bomberman progression: after ~60s, start marking border tiles
+    // as WALL one per second spiraling inward, forcing players together.
+    // Players standing on a newly-walled tile die.
+    //
+    // You'll need:
+    //   - A round-elapsed-time field on GameState (incremented here each tick)
+    //   - A "next-tile-to-claim" pointer or a spiral coordinate generator
+    //   - Per-tick check: if elapsed time crossed the next threshold, mark
+    //     the next tile as WALL via map.setTile(r, c, Tile.WALL) and kill
+    //     any player(s) standing on it (CollisionDetector.getPlayersAt)
+    //
+    // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
+    // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
+
+    private void updateGameProgression(GameState state){
+        double now = state.getRoundTime();
+
+        while (now - state.getLastShrinkTime() >= Constants.SHRINK_INTERVAL) {
+
+            shrinkMap(state);
+
+            state.setLastShrinkTime(state.getLastShrinkTime() + Constants.SHRINK_INTERVAL);
+            state.increaseShrinkLayer();
+        }
+    }
+
+    private void shrinkMap(GameState state) {
+        GameMap map = state.getGameMap();
+
+        int layer = state.getShrinkLayer() + 1;
+        int rows = map.getRows();
+        int cols = map.getCols();
+
+        int maxLayer = Math.min(rows, cols) / 2;
+
+        if (layer >= maxLayer) {
+            state.setGameOver(true);
+            return;
+        }
+
+        // top & bottom
+        for (int c = layer; c < cols - layer; c++) {
+            markWarning(state, layer, c);
+            markWarning(state, rows - 1 - layer, c);
+        }
+
+        // left & right
+        for (int r = layer + 1; r < rows - layer - 1; r++) {
+            markWarning(state, r, layer);
+            markWarning(state, r, cols - 1 - layer);
+        }
+    }
+
+    private void markWarning(GameState state, int r, int c) {
+        state.addWarningTile(r, c, state.getRoundTime());
+    }
+
+    private void updateWarningTiles(GameState state) {
+        double now = state.getRoundTime();
+
+        Iterator<WarningTile> it = state.getWarningTiles().iterator();
+
+        while (it.hasNext()) {
+            WarningTile tile = it.next();
+
+            if (tile.shouldBecomeWall(now, Constants.WARNING_WALL_DURATION)) {
+
+                int row = tile.getRow();
+                int col = tile.getCol();
+
+                state.getGameMap().setTile(row, col, Tile.WALL);
+
+                // kill players when the wall becomes a real wall
+                double tileX = col * Constants.TILE_SIZE;
+                double tileY = row * Constants.TILE_SIZE;
+
+                for (Player player : state.getPlayers()) {
+
+                    double playerLeft =
+                            player.getPixelX() + Constants.PLAYER_HITBOX_OFFSET;
+
+                    double playerTop =
+                            player.getPixelY() + Constants.PLAYER_HITBOX_OFFSET;
+
+                    double playerRight =
+                            playerLeft + Constants.PLAYER_HITBOX_SIZE;
+
+                    double playerBottom =
+                            playerTop + Constants.PLAYER_HITBOX_SIZE;
+
+                    double tileRight = tileX + Constants.TILE_SIZE;
+                    double tileBottom = tileY + Constants.TILE_SIZE;
+
+                    boolean overlaps =
+                            playerRight > tileX &&
+                                    playerLeft < tileRight &&
+                                    playerBottom > tileY &&
+                                    playerTop < tileBottom;
+
+                    if (overlaps) {
+                        player.kill();
+                    }
+                }
+
+                // destroy power ups when the wall becomes a real wall
+                for (PowerUp powerUp : state.getPowerUps()) {
+
+                    if (powerUp.getRow() == row &&
+                            powerUp.getCol() == col) {
+
+                        powerUp.destroy();
+                    }
+                }
+
+                it.remove();
             }
         }
     }

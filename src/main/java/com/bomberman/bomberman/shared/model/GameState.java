@@ -27,6 +27,12 @@ public class GameState implements GameStateView {
     private transient final List<Explosion> explosionsToAdd;
     private transient final List<PowerUp> powerUpsToAdd;
 
+    // Game progression
+    private double roundTime;
+    private int shrinkLayer;
+    private double lastShrinkTime;
+    private final List<WarningTile> warningTiles;
+
     private boolean gameOver;
 
     public GameState() {
@@ -38,6 +44,10 @@ public class GameState implements GameStateView {
         this.bombsToAdd = new ArrayList<>();
         this.explosionsToAdd = new ArrayList<>();
         this.powerUpsToAdd = new ArrayList<>();
+        this.warningTiles = new ArrayList<>();
+        this.shrinkLayer = 0;
+        this.lastShrinkTime = 0;
+        this.roundTime = 0;
         this.gameOver = false;
     }
 
@@ -66,6 +76,16 @@ public class GameState implements GameStateView {
     @Override
     public List<? extends PowerUpView> getPowerUpViews() {
         return powerUps;
+    }
+
+    @Override
+    public List<WarningTile> getWarningTiles() {
+        return warningTiles;
+    }
+
+    @Override
+    public double getRoundTime() {
+        return roundTime;
     }
 
     @Override
@@ -132,6 +152,30 @@ public class GameState implements GameStateView {
         bombsToAdd.clear();
         explosionsToAdd.clear();
         powerUpsToAdd.clear();
+    }
+
+    public void addRoundTime(double deltaTime) {
+        roundTime += deltaTime;
+    }
+
+    public int getShrinkLayer() {
+        return shrinkLayer;
+    }
+
+    public void increaseShrinkLayer() {
+        shrinkLayer++;
+    }
+
+    public double getLastShrinkTime() {
+        return lastShrinkTime;
+    }
+
+    public void setLastShrinkTime(double lastShrinkTime) {
+        this.lastShrinkTime = lastShrinkTime;
+    }
+
+    public void addWarningTile(int row, int col, double startTime) {
+        warningTiles.add(new WarningTile(row, col, startTime));
     }
 
     public void setGameOver(boolean gameOver) {

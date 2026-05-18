@@ -39,4 +39,8 @@ public final class Constants {
     public static final int RANGE_EFFECT = 1;
     public static final double SPEED_EFFECT = 0.3;
     public static final int BOMB_EFFECT = 1;
+
+    // Game progression
+    public static final int SHRINK_INTERVAL = 60;
+    public static final double WARNING_WALL_DURATION = 4.0;
 }
