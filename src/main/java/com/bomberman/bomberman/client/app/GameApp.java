@@ -48,6 +48,7 @@ public class GameApp extends Application {
     private GameClient client;
     private NetworkedGameRunner runner;
     private GameServer inProcessServer; // non-null only when user chose Host
+    private LobbyState latestLobbyState;
 
     @Override
     public void start(Stage stage) {
@@ -163,6 +164,7 @@ public class GameApp extends Application {
     }
 
     private void showLobby(LobbyState state) {
+        this.latestLobbyState = state;
         scene.setRoot(LobbyScreen.create(
                 state,
                 client.getMyPlayerId(),
@@ -174,9 +176,23 @@ public class GameApp extends Application {
     }
 
     private void showGameOver(GameOver gameOver) {
-        String message = gameOver.isDraw()
-                ? "Draw"
-                : "Player " + gameOver.getWinnerPlayerId() + " wins";
+        String message;
+        if (gameOver.isDraw()) {
+            message = "Draw";
+        } else if (gameOver.getWinnerPlayerId() == client.getMyPlayerId()) {
+            message = "You win";
+        } else {
+            String winnerName = "Player " + gameOver.getWinnerPlayerId();
+
+            // Safely resolve the winner's name from the last known lobby state
+            if (latestLobbyState != null
+                    && gameOver.getWinnerPlayerId() >= 0
+                    && gameOver.getWinnerPlayerId() < latestLobbyState.getPlayerNames().size()) {
+                winnerName = latestLobbyState.getPlayerNames().get(gameOver.getWinnerPlayerId());
+            }
+
+            message = winnerName + " wins";
+        }
 
         scene.setRoot(GameOverScreen.create(
                 message,
