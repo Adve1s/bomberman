@@ -11,7 +11,6 @@ import javafx.scene.layout.VBox;
 import java.util.List;
 
 /**
- *  TODO (Teammate A) - Set up LobbyScreen
  *
  * <h2>For teammate A</h2>
  *
@@ -100,17 +99,25 @@ public class LobbyScreen {
             Runnable onStartClicked,
             Runnable onLeaveClicked
     ) {
-        Label title = new Label("BOMBERMAN");
-        title.setStyle("-fx-font-size: 48px; -fx-font-weight: bold;");
-
-        Label subtitle = new Label("Lobby");
-        subtitle.setStyle("-fx-font-size: 24px;");
+        Label title = new Label("Lobby");
+        title.setStyle("-fx-font-size: 36px; -fx-font-weight: bold;");
 
         VBox playersBox = new VBox(8);
         playersBox.setAlignment(Pos.CENTER);
 
         List<String> playerNames = state.getPlayerNames();
         List<Boolean> readyStates = state.getReadyStates();
+
+        long readyCount = readyStates.stream()
+                .filter(Boolean::booleanValue)
+                .count();
+
+        String readyText = playerNames.size() < 2
+                ? "Waiting for players ..."
+                : readyCount + "/" + playerNames.size() + " Ready";
+
+        Label readyCounterLabel = new Label(readyText);
+        readyCounterLabel.setStyle("-fx-font-size: 16px;");
 
         for (int i = 0; i < playerNames.size(); i++) {
             String playerName = playerNames.get(i);
@@ -122,12 +129,11 @@ public class LobbyScreen {
             playersBox.getChildren().add(playerLabel);
         }
 
-        // Used to disable the Ready button once this player is marked ready.
-        boolean amReady = readyStates.get(myPlayerId);
+        int myIndex = state.getPlayerIds().indexOf(myPlayerId);
+        boolean amReady = myIndex >= 0 && readyStates.get(myIndex);
 
-        Button readyButton = new Button(amReady ? "Ready!" : "Ready");
+        Button readyButton = new Button(amReady ? "Unready" : "Ready");
         readyButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
-        readyButton.setDisable(amReady);
         readyButton.setOnAction(event -> onReadyToggled.run());
 
         Button leaveButton = new Button("Leave");
@@ -138,13 +144,17 @@ public class LobbyScreen {
         buttons.setAlignment(Pos.CENTER);
 
         if (state.getHostPlayerId() == myPlayerId) {
+            boolean enoughPlayers = playerNames.size() >= 2;
+            boolean everyoneReady = readyStates.stream().allMatch(Boolean::booleanValue);
+
             Button startButton = new Button("Start");
             startButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
+            startButton.setDisable(!enoughPlayers || !everyoneReady);
             startButton.setOnAction(event -> onStartClicked.run());
             buttons.getChildren().add(startButton);
         }
 
-        VBox layout = new VBox(20, title, subtitle, playersBox, buttons);
+        VBox layout = new VBox(20, title, readyCounterLabel, playersBox, buttons);
         layout.setAlignment(Pos.CENTER);
 
         return layout;

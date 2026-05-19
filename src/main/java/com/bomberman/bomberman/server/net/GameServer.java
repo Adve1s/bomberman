@@ -115,6 +115,14 @@ public class GameServer {
     // Network thread
 
     private void handleConnected(Connection connection) {
+        // Don't allow late joiners once the match has started.
+        if (gameStarted) {
+            connection.sendTCP(new JoinRejected("Game already started"));
+            connection.close();
+            System.out.println("[server] rejected " + connection.getID() + " — game already started");
+            return;
+        }
+
         int playerId = nextAvailablePlayerId();
         if (playerId < 0) {
             connection.sendTCP(new JoinRejected("Server is full (" + MAX_PLAYERS + " max)"));
@@ -270,20 +278,27 @@ public class GameServer {
     // Helpers
 
     private void broadcastLobbyState() {
-        List<String> playerNames = sessionsByConnection.values().stream()
+        List<PlayerSession> sortedSessions = sessionsByConnection.values().stream()
+                .sorted(Comparator.comparingInt(session -> session.playerId))
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        List<Integer> playerIds = sortedSessions.stream()
+                .map(session -> session.playerId)
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        List<String> playerNames = sortedSessions.stream()
                 .map(session -> session.name)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        List<Boolean> readyStates = sessionsByConnection.values().stream()
+        List<Boolean> readyStates = sortedSessions.stream()
                 .map(session -> session.ready)
                 .collect(Collectors.toCollection(ArrayList::new));
 
-        int hostPlayerId = sessionsByConnection.values().stream()
-                .mapToInt(session -> session.playerId)
-                .min()
-                .orElse(-1);
+        int hostPlayerId = sortedSessions.isEmpty()
+                ? -1
+                : sortedSessions.get(0).playerId;
 
-        kryoServer.sendToAllTCP(new LobbyState(playerNames, readyStates, hostPlayerId));
+        kryoServer.sendToAllTCP(new LobbyState(playerIds, playerNames, readyStates, hostPlayerId));
 
         System.out.println("[server] lobby state broadcast: " + playerNames);
     }

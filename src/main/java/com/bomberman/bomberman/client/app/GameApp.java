@@ -163,11 +163,20 @@ public class GameApp extends Application {
     }
 
     private void showLobby(LobbyState state) {
+        if (client.isGameStarted()) {
+            return;
+        }
+
         this.latestLobbyState = state;
         scene.setRoot(LobbyScreen.create(
                 state,
                 client.getMyPlayerId(),
-                () -> client.send(new ReadyCommand(true)),
+                () -> {
+                    int myIndex = state.getPlayerIds().indexOf(client.getMyPlayerId());
+                    if (myIndex >= 0) {
+                        client.send(new ReadyCommand(!state.getReadyStates().get(myIndex)));
+                    }
+                },
                 () -> client.send(new StartGameCommand()),
                 () -> returnToMenu("", lastName, null)
         ));
@@ -182,11 +191,12 @@ public class GameApp extends Application {
         } else {
             String winnerName = "Player " + gameOver.getWinnerPlayerId();
 
-            // Safely resolve the winner's name from the last known lobby state
-            if (latestLobbyState != null
-                    && gameOver.getWinnerPlayerId() >= 0
-                    && gameOver.getWinnerPlayerId() < latestLobbyState.getPlayerNames().size()) {
-                winnerName = latestLobbyState.getPlayerNames().get(gameOver.getWinnerPlayerId());
+            if (latestLobbyState != null) {
+                int winnerIndex = latestLobbyState.getPlayerIds().indexOf(gameOver.getWinnerPlayerId());
+
+                if (winnerIndex >= 0) {
+                    winnerName = latestLobbyState.getPlayerNames().get(winnerIndex);
+                }
             }
 
             message = winnerName + " wins";

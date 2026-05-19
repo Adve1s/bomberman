@@ -10,25 +10,26 @@ import java.util.List;
  * as your UI requires.
  */
 public class LobbyState implements ServerToClientMessage {
+    private final List<Integer> playerIds;
     private final List<String> playerNames;
     private final List<Boolean> readyStates;
     private final int hostPlayerId;
 
 
-    public LobbyState(List<String> playerNames, List<Boolean> readyStates, int hostPlayerId) {
+    public LobbyState(List<Integer> playerIds, List<String> playerNames, List<Boolean> readyStates, int hostPlayerId) {
+        this.playerIds = playerIds;
         this.playerNames = playerNames;
         this.readyStates = readyStates;
         this.hostPlayerId = hostPlayerId;
     }
 
+    public List<Integer> getPlayerIds() { return playerIds; }
     public List<String> getPlayerNames() {
         return playerNames;
     }
-
     public List<Boolean> getReadyStates() {
         return readyStates;
     }
-
     public int getHostPlayerId() {
         return hostPlayerId;
     }
