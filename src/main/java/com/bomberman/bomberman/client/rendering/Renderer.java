@@ -37,10 +37,22 @@ public class Renderer {
     private static final Color COLOR_BUSH_DARK = Color.rgb(35, 80, 30);
     private static final Color COLOR_BUSH_LIGHT = Color.rgb(75, 135, 60);
 
+    private static final Color COLOR_STUMP_BASE = Color.rgb(140, 85, 45);
+    private static final Color COLOR_STUMP_DARK = Color.rgb(95, 55, 30);
+    private static final Color COLOR_STUMP_LIGHT = Color.rgb(190, 130, 75);
+    private static final Color COLOR_STUMP_RING = Color.rgb(220, 170, 105);
+
     private static final Color COLOR_BOX   = Color.rgb(180, 130, 70);
 
     // Entity colors
     private static final Color COLOR_BOMB       = Color.rgb(30, 30, 30);
+    private static final Color COLOR_PINECONE_BASE = Color.rgb(125, 85, 45);
+    private static final Color COLOR_PINECONE_DARK = Color.rgb(85, 55, 30);
+    private static final Color COLOR_PINECONE_LIGHT = Color.rgb(165, 120, 75);
+    private static final Color COLOR_PINECONE_STEM = Color.rgb(95, 70, 40);
+    private static final Color COLOR_FUSE_SPARK = Color.rgb(255, 170, 40);
+    private static final Color COLOR_FUSE_SPARK_LIGHT = Color.rgb(255, 220, 90);
+
     private static final Color COLOR_EXPLOSION   = Color.rgb(255, 100, 30);
     private static final Color COLOR_POWERUP     = Color.rgb(255, 215, 0);
     private static final Color COLOR_PLAYER_DEAD = Color.rgb(100, 100, 100);
@@ -53,12 +65,16 @@ public class Renderer {
             Color.rgb(230, 200, 50)    // yellow
     };
 
+    private static final Color COLOR_PLAYER_PUPIL = Color.rgb(30, 30, 30);
+    private static final Color COLOR_PLAYER_SHADOW = Color.rgb(0, 0, 0, 0.25);
+    private static final Color COLOR_GNOME_SKIN = Color.rgb(244, 214, 182);
+    private static final Color COLOR_GNOME_BEARD = Color.rgb(235, 235, 235);
+    private static final Color COLOR_GNOME_BOOTS = Color.rgb(90, 60, 35);
+    private static final Color COLOR_PLAYER_OUTLINE = Color.rgb(40, 40, 40, 0.35);
+
     // Entity padding (pixels inset from tile edge)
-    private static final int PLAYER_PADDING    = 4;
-    private static final int BOMB_PADDING      = 6;
     private static final int EXPLOSION_PADDING = 4;
     private static final int POWERUP_PADDING   = 10;
-    private static final int PLAYER_CORNER_RADIUS = 8;
 
     // Grid line styling
     private static final Color GRID_LINE_COLOR = Color.rgb(0, 0, 0, 0.15);
@@ -110,6 +126,9 @@ public class Renderer {
                     } else {
                         drawRockWall(x, y, row, col);
                     }
+                }
+                if (tile == Tile.BOX) {
+                    drawStumpBox(x, y, row, col);
                 }
 
                 graphicsContext.setStroke(GRID_LINE_COLOR);
@@ -244,18 +263,130 @@ public class Renderer {
     private void drawBushWall(double x, double y, int row, int col) {
         double size = Constants.TILE_SIZE;
 
-        graphicsContext.setFill(COLOR_BUSH_BASE);
+        graphicsContext.setFill(COLOR_BUSH_DARK);
         graphicsContext.fillRect(x, y, size, size);
 
-        graphicsContext.setFill(COLOR_BUSH_DARK);
-        graphicsContext.fillOval(x + size * 0.05, y + size * 0.20, size * 0.45, size * 0.45);
-        graphicsContext.fillOval(x + size * 0.35, y + size * 0.10, size * 0.45, size * 0.45);
-        graphicsContext.fillOval(x + size * 0.20, y + size * 0.40, size * 0.50, size * 0.40);
+        int variant = Math.abs(row * 31 + col * 17) % 3;
+
+        graphicsContext.setFill(COLOR_BUSH_BASE);
+
+        if (variant == 0) {
+            graphicsContext.fillOval(x + size * 0.00, y + size * 0.18, size * 0.45, size * 0.45);
+            graphicsContext.fillOval(x + size * 0.30, y + size * 0.05, size * 0.50, size * 0.50);
+            graphicsContext.fillOval(x + size * 0.55, y + size * 0.25, size * 0.45, size * 0.45);
+            graphicsContext.fillOval(x + size * 0.20, y + size * 0.48, size * 0.55, size * 0.40);
+        } else if (variant == 1) {
+            graphicsContext.fillOval(x + size * 0.10, y + size * 0.05, size * 0.50, size * 0.50);
+            graphicsContext.fillOval(x + size * 0.45, y + size * 0.12, size * 0.48, size * 0.48);
+            graphicsContext.fillOval(x + size * 0.00, y + size * 0.42, size * 0.48, size * 0.45);
+            graphicsContext.fillOval(x + size * 0.35, y + size * 0.45, size * 0.55, size * 0.42);
+        } else {
+            graphicsContext.fillOval(x + size * 0.02, y + size * 0.08, size * 0.55, size * 0.48);
+            graphicsContext.fillOval(x + size * 0.42, y + size * 0.04, size * 0.52, size * 0.50);
+            graphicsContext.fillOval(x + size * 0.18, y + size * 0.38, size * 0.60, size * 0.48);
+        }
 
         graphicsContext.setFill(COLOR_BUSH_LIGHT);
-        graphicsContext.fillOval(x + size * 0.15, y + size * 0.18, size * 0.18, size * 0.18);
-        graphicsContext.fillOval(x + size * 0.52, y + size * 0.22, size * 0.16, size * 0.16);
-        graphicsContext.fillOval(x + size * 0.35, y + size * 0.50, size * 0.14, size * 0.14);
+        graphicsContext.fillOval(x + size * 0.18, y + size * 0.18, size * 0.16, size * 0.16);
+        graphicsContext.fillOval(x + size * 0.55, y + size * 0.20, size * 0.14, size * 0.14);
+        graphicsContext.fillOval(x + size * 0.35, y + size * 0.55, size * 0.15, size * 0.15);
+
+        graphicsContext.setFill(COLOR_BUSH_DARK);
+        graphicsContext.fillOval(x + size * 0.08, y + size * 0.58, size * 0.18, size * 0.14);
+        graphicsContext.fillOval(x + size * 0.68, y + size * 0.48, size * 0.16, size * 0.14);
+    }
+
+    private void drawStumpBox(double x, double y, int row, int col) {
+        double size = Constants.TILE_SIZE;
+
+        graphicsContext.setFill(COLOR_FLOOR);
+        graphicsContext.fillRect(x, y, size, size);
+        drawPixelGrassDetails(x, y, row, col);
+
+        int variant = Math.abs(row * 31 + col * 17) % 3;
+
+        double stumpX;
+        double stumpY;
+        double stumpW;
+        double stumpH;
+
+        if (variant == 0) {
+            stumpX = x + size * 0.16;
+            stumpY = y + size * 0.12;
+            stumpW = size * 0.68;
+            stumpH = size * 0.76;
+        } else if (variant == 1) {
+            stumpX = x + size * 0.20;
+            stumpY = y + size * 0.10;
+            stumpW = size * 0.60;
+            stumpH = size * 0.78;
+        } else {
+            stumpX = x + size * 0.13;
+            stumpY = y + size * 0.15;
+            stumpW = size * 0.74;
+            stumpH = size * 0.70;
+        }
+
+        graphicsContext.setFill(COLOR_STUMP_DARK);
+        graphicsContext.fillRoundRect(
+                stumpX + size * 0.04,
+                stumpY + size * 0.05,
+                stumpW,
+                stumpH,
+                14,
+                14
+        );
+
+        graphicsContext.setFill(COLOR_STUMP_BASE);
+        graphicsContext.fillRoundRect(
+                stumpX,
+                stumpY,
+                stumpW,
+                stumpH,
+                14,
+                14
+        );
+
+        graphicsContext.setFill(COLOR_STUMP_LIGHT);
+        graphicsContext.fillOval(
+                stumpX + stumpW * 0.08,
+                stumpY + stumpH * 0.06,
+                stumpW * 0.84,
+                stumpH * 0.32
+        );
+
+        graphicsContext.setStroke(COLOR_STUMP_RING);
+        graphicsContext.setLineWidth(2);
+        graphicsContext.strokeOval(
+                stumpX + stumpW * 0.25,
+                stumpY + stumpH * 0.13,
+                stumpW * 0.50,
+                stumpH * 0.16
+        );
+
+        graphicsContext.setStroke(COLOR_STUMP_DARK);
+        graphicsContext.setLineWidth(2);
+
+        graphicsContext.strokeLine(
+                stumpX + stumpW * 0.25,
+                stumpY + stumpH * 0.42,
+                stumpX + stumpW * 0.22,
+                stumpY + stumpH * 0.75
+        );
+
+        graphicsContext.strokeLine(
+                stumpX + stumpW * 0.52,
+                stumpY + stumpH * 0.40,
+                stumpX + stumpW * 0.50,
+                stumpY + stumpH * 0.78
+        );
+
+        graphicsContext.strokeLine(
+                stumpX + stumpW * 0.75,
+                stumpY + stumpH * 0.45,
+                stumpX + stumpW * 0.78,
+                stumpY + stumpH * 0.72
+        );
     }
 
     // Entities
@@ -278,14 +409,129 @@ public class Renderer {
         for (BombView bomb : state.getBombViews()) {
             if (!bomb.isActive()) continue;
 
-            graphicsContext.setFill(COLOR_BOMB);
-            graphicsContext.fillOval(
-                    bomb.getPixelX() + BOMB_PADDING,
-                    bomb.getPixelY() + BOMB_PADDING,
-                    Constants.TILE_SIZE - BOMB_PADDING * 2,
-                    Constants.TILE_SIZE - BOMB_PADDING * 2
-            );
+            double time = System.nanoTime() / 1_000_000_000.0;
+            double pulse = (Math.sin(time * 6) + 1) / 2.0;
+
+            drawPineConeBomb(bomb.getPixelX(), bomb.getPixelY(), pulse);
         }
+    }
+
+    private void drawPineConeBomb(double x, double y, double pulse) {
+        double size = Constants.TILE_SIZE;
+        double scale = 1.0 + pulse * 0.05;
+        double offset = (size - size * scale) / 2.0;
+
+        x = x + offset;
+        y = y + offset;
+        size = size * scale;
+
+        graphicsContext.setFill(COLOR_PLAYER_SHADOW);
+        graphicsContext.fillOval(
+                x + size * 0.30,
+                y + size * 0.80,
+                size * 0.40,
+                size * 0.10
+        );
+
+        graphicsContext.setFill(COLOR_PINECONE_STEM);
+        graphicsContext.fillRoundRect(
+                x + size * 0.46,
+                y + size * 0.08,
+                size * 0.08,
+                size * 0.12,
+                4,
+                4
+        );
+
+        double[] coneX = {
+                x + size * 0.50,
+                x + size * 0.30,
+                x + size * 0.24,
+                x + size * 0.32,
+                x + size * 0.50,
+                x + size * 0.68,
+                x + size * 0.76,
+                x + size * 0.70
+        };
+
+        double[] coneY = {
+                y + size * 0.18,
+                y + size * 0.32,
+                y + size * 0.55,
+                y + size * 0.76,
+                y + size * 0.84,
+                y + size * 0.76,
+                y + size * 0.55,
+                y + size * 0.32
+        };
+
+        graphicsContext.setFill(COLOR_PINECONE_DARK);
+        graphicsContext.fillPolygon(coneX, coneY, coneX.length);
+
+        double[] innerConeX = {
+                x + size * 0.50,
+                x + size * 0.33,
+                x + size * 0.28,
+                x + size * 0.35,
+                x + size * 0.50,
+                x + size * 0.65,
+                x + size * 0.72,
+                x + size * 0.67
+        };
+
+        double[] innerConeY = {
+                y + size * 0.20,
+                y + size * 0.34,
+                y + size * 0.55,
+                y + size * 0.73,
+                y + size * 0.80,
+                y + size * 0.73,
+                y + size * 0.55,
+                y + size * 0.34
+        };
+
+        graphicsContext.setFill(COLOR_PINECONE_BASE);
+        graphicsContext.fillPolygon(innerConeX, innerConeY, innerConeX.length);
+
+        graphicsContext.setFill(COLOR_PINECONE_DARK);
+
+        graphicsContext.fillOval(x + size * 0.43, y + size * 0.28, size * 0.14, size * 0.08);
+
+        graphicsContext.fillOval(x + size * 0.35, y + size * 0.40, size * 0.14, size * 0.08);
+        graphicsContext.fillOval(x + size * 0.52, y + size * 0.40, size * 0.14, size * 0.08);
+
+        graphicsContext.fillOval(x + size * 0.30, y + size * 0.53, size * 0.15, size * 0.08);
+        graphicsContext.fillOval(x + size * 0.44, y + size * 0.54, size * 0.15, size * 0.08);
+        graphicsContext.fillOval(x + size * 0.58, y + size * 0.53, size * 0.15, size * 0.08);
+
+        graphicsContext.fillOval(x + size * 0.36, y + size * 0.66, size * 0.15, size * 0.08);
+        graphicsContext.fillOval(x + size * 0.51, y + size * 0.66, size * 0.15, size * 0.08);
+
+        graphicsContext.setFill(COLOR_PINECONE_LIGHT);
+        graphicsContext.fillOval(
+                x + size * 0.39,
+                y + size * 0.26,
+                size * 0.10,
+                size * 0.07
+        );
+
+        double sparkSize = size * (0.06 + pulse * 0.09);
+
+        graphicsContext.setFill(COLOR_FUSE_SPARK);
+        graphicsContext.fillOval(
+                x + size * 0.56,
+                y + size * 0.03,
+                sparkSize,
+                sparkSize
+        );
+
+        graphicsContext.setFill(COLOR_FUSE_SPARK_LIGHT);
+        graphicsContext.fillOval(
+                x + size * 0.585,
+                y + size * 0.05,
+                sparkSize * 0.45,
+                sparkSize * 0.45
+        );
     }
 
     private void drawExplosions(GameStateView state) {
@@ -310,22 +556,145 @@ public class Renderer {
 
     private void drawPlayers(GameStateView state) {
         for (PlayerView player : state.getPlayerViews()) {
-            Color color;
+            Color clothesColor;
 
             if (!player.isAlive()) {
-                color = COLOR_PLAYER_DEAD;
+                clothesColor = COLOR_PLAYER_DEAD;
             } else {
-                color = PLAYER_COLORS[player.getPlayerId() % PLAYER_COLORS.length];
+                clothesColor = PLAYER_COLORS[player.getPlayerId() % PLAYER_COLORS.length];
             }
 
-            graphicsContext.setFill(color);
-            graphicsContext.fillRoundRect(
-                    player.getPixelX() + PLAYER_PADDING,
-                    player.getPixelY() + PLAYER_PADDING,
-                    Constants.TILE_SIZE - PLAYER_PADDING * 2,
-                    Constants.TILE_SIZE - PLAYER_PADDING * 2,
-                    PLAYER_CORNER_RADIUS, PLAYER_CORNER_RADIUS
+            drawGnomePlayer(
+                    player.getPixelX(),
+                    player.getPixelY(),
+                    Constants.TILE_SIZE,
+                    clothesColor
             );
         }
+    }
+
+    private void drawGnomePlayer(double x, double y, double size, Color clothesColor) {
+        graphicsContext.setFill(COLOR_PLAYER_SHADOW);
+        graphicsContext.fillOval(
+                x + size * 0.20,
+                y + size * 0.84,
+                size * 0.60,
+                size * 0.11
+        );
+
+        graphicsContext.setFill(COLOR_GNOME_BOOTS);
+        graphicsContext.fillRoundRect(
+                x + size * 0.26,
+                y + size * 0.75,
+                size * 0.18,
+                size * 0.12,
+                4,
+                4
+        );
+        graphicsContext.fillRoundRect(
+                x + size * 0.56,
+                y + size * 0.75,
+                size * 0.18,
+                size * 0.12,
+                4,
+                4
+        );
+
+        graphicsContext.setFill(clothesColor);
+        graphicsContext.fillRoundRect(
+                x + size * 0.20,
+                y + size * 0.46,
+                size * 0.60,
+                size * 0.32,
+                12,
+                12
+        );
+
+        graphicsContext.setStroke(COLOR_PLAYER_OUTLINE);
+        graphicsContext.setLineWidth(1.5);
+        graphicsContext.strokeRoundRect(
+                x + size * 0.20,
+                y + size * 0.46,
+                size * 0.60,
+                size * 0.32,
+                12,
+                12
+        );
+
+        graphicsContext.setFill(COLOR_GNOME_SKIN);
+        graphicsContext.fillOval(
+                x + size * 0.30,
+                y + size * 0.27,
+                size * 0.40,
+                size * 0.28
+        );
+
+        graphicsContext.setFill(COLOR_GNOME_BEARD);
+        graphicsContext.fillOval(
+                x + size * 0.27,
+                y + size * 0.40,
+                size * 0.46,
+                size * 0.28
+        );
+
+        graphicsContext.setFill(Color.rgb(230, 170, 140));
+        graphicsContext.fillOval(
+                x + size * 0.45,
+                y + size * 0.39,
+                size * 0.10,
+                size * 0.08
+        );
+
+        graphicsContext.setFill(COLOR_PLAYER_PUPIL);
+        graphicsContext.fillOval(
+                x + size * 0.39,
+                y + size * 0.35,
+                size * 0.045,
+                size * 0.055
+        );
+        graphicsContext.fillOval(
+                x + size * 0.56,
+                y + size * 0.35,
+                size * 0.045,
+                size * 0.055
+        );
+
+        graphicsContext.setFill(clothesColor.darker());
+        graphicsContext.fillRoundRect(
+                x + size * 0.24,
+                y + size * 0.24,
+                size * 0.52,
+                size * 0.08,
+                7,
+                7
+        );
+
+        graphicsContext.setFill(clothesColor);
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.50,
+                        x + size * 0.22,
+                        x + size * 0.78
+                },
+                new double[] {
+                        y + size * 0.03,
+                        y + size * 0.28,
+                        y + size * 0.28
+                },
+                3
+        );
+
+        graphicsContext.setFill(Color.color(
+                Math.min(clothesColor.getRed() + 0.20, 1.0),
+                Math.min(clothesColor.getGreen() + 0.20, 1.0),
+                Math.min(clothesColor.getBlue() + 0.20, 1.0),
+                0.75
+        ));
+        graphicsContext.fillOval(
+                x + size * 0.42,
+                y + size * 0.12,
+                size * 0.12,
+                size * 0.08
+        );
     }
 }
