@@ -145,12 +145,18 @@ public class GameServer {
     }
 
     private void handleDisconnected(Connection connection) {
+        int oldHostPlayerId = getHostPlayerId();
         // TODO (teammate B): remove the player from GameState (queue via pendingActions),
         // broadcast PlayerLeft, end the game if only one player remains.
         // Important to remove Player from GameState since we reuse PlayerId
         PlayerSession session = sessionsByConnection.remove(connection.getID());
         if (session != null) {
             System.out.println("[server] player " + session.playerId + " disconnected");
+
+            if (session.playerId == oldHostPlayerId) {
+                kryoServer.sendToAllTCP(new SessionClosed("Host left the game"));
+                return;
+            }
 
             // Refresh lobby for remaining clients after someone leaves
             broadcastLobbyState();
@@ -188,11 +194,7 @@ public class GameServer {
             }
 
             case StartGameCommand startGame -> {
-                // The host is the connected player with the lowest playerId.
-                int hostPlayerId = sessionsByConnection.values().stream()
-                        .mapToInt(s -> s.playerId)
-                        .min()
-                        .orElse(-1);
+                int hostPlayerId = getHostPlayerId();
 
                 if (session.playerId != hostPlayerId) {
                     System.out.println("[server] player " + session.playerId + " tried to start game but is not host");
@@ -205,6 +207,7 @@ public class GameServer {
                 }
 
                 boolean everyoneReady = sessionsByConnection.values().stream()
+                        .filter(s -> s.playerId != hostPlayerId)
                         .allMatch(s -> s.ready);
 
                 if (!everyoneReady) {
@@ -318,6 +321,13 @@ public class GameServer {
             if (p.getPlayerId() == playerId) return p;
         }
         return null;
+    }
+
+    private int getHostPlayerId() {
+        return sessionsByConnection.values().stream()
+                .mapToInt(session -> session.playerId)
+                .min()
+                .orElse(-1);
     }
 
     // Per-connection state

@@ -99,7 +99,7 @@ public class LobbyScreen {
             Runnable onStartClicked,
             Runnable onLeaveClicked
     ) {
-        Label title = new Label("Lobby");
+        Label title = new Label("LOBBY");
         title.setStyle("-fx-font-size: 36px; -fx-font-weight: bold;");
 
         VBox playersBox = new VBox(8);
@@ -108,9 +108,12 @@ public class LobbyScreen {
         List<String> playerNames = state.getPlayerNames();
         List<Boolean> readyStates = state.getReadyStates();
 
-        long readyCount = readyStates.stream()
-                .filter(Boolean::booleanValue)
-                .count();
+        long readyCount = 0;
+        for (int i = 0; i < playerNames.size(); i++) {
+            if (isReadyForDisplay(state, readyStates, i)) {
+                readyCount++;
+            }
+        }
 
         String readyText = playerNames.size() < 2
                 ? "Waiting for players ..."
@@ -121,7 +124,7 @@ public class LobbyScreen {
 
         for (int i = 0; i < playerNames.size(); i++) {
             String playerName = playerNames.get(i);
-            boolean ready = readyStates.get(i);
+            boolean ready = isReadyForDisplay(state, readyStates, i);
             String status = ready ? "Ready" : "Not ready";
 
             Label playerLabel = new Label(playerName + " (" + status + ")");
@@ -132,20 +135,27 @@ public class LobbyScreen {
         int myIndex = state.getPlayerIds().indexOf(myPlayerId);
         boolean amReady = myIndex >= 0 && readyStates.get(myIndex);
 
-        Button readyButton = new Button(amReady ? "Unready" : "Ready");
-        readyButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
-        readyButton.setOnAction(event -> onReadyToggled.run());
-
         Button leaveButton = new Button("Leave");
         leaveButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
         leaveButton.setOnAction(event -> onLeaveClicked.run());
 
-        HBox buttons = new HBox(20, readyButton, leaveButton);
+        HBox buttons;
+
+        if (state.getHostPlayerId() == myPlayerId) {
+            buttons = new HBox(20, leaveButton);
+        } else {
+            Button readyButton = new Button(amReady ? "Unready" : "Ready");
+            readyButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
+            readyButton.setOnAction(event -> onReadyToggled.run());
+
+            buttons = new HBox(20, readyButton, leaveButton);
+        }
+
         buttons.setAlignment(Pos.CENTER);
 
         if (state.getHostPlayerId() == myPlayerId) {
             boolean enoughPlayers = playerNames.size() >= 2;
-            boolean everyoneReady = readyStates.stream().allMatch(Boolean::booleanValue);
+            boolean everyoneReady = areAllNonHostPlayersReady(state, readyStates);
 
             Button startButton = new Button("Start");
             startButton.setStyle("-fx-font-size: 18px; -fx-padding: 6 24;");
@@ -158,5 +168,23 @@ public class LobbyScreen {
         layout.setAlignment(Pos.CENTER);
 
         return layout;
+    }
+
+    // Helpers
+
+    private static boolean isReadyForDisplay(LobbyState state, List<Boolean> readyStates, int index) {
+        boolean isHost = state.getPlayerIds().get(index) == state.getHostPlayerId();
+        return isHost || readyStates.get(index);
+    }
+
+    private static boolean areAllNonHostPlayersReady(LobbyState state, List<Boolean> readyStates) {
+        for (int i = 0; i < readyStates.size(); i++) {
+            int playerId = state.getPlayerIds().get(i);
+
+            if (playerId != state.getHostPlayerId() && !readyStates.get(i)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

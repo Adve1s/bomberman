@@ -50,6 +50,7 @@ public class GameApp extends Application {
     private GameServer inProcessServer; // non-null only when user chose Host
     private LobbyState latestLobbyState;
     private String lastName = "";
+    private String lastHost = "";
 
     @Override
     public void start(Stage stage) {
@@ -105,6 +106,7 @@ public class GameApp extends Application {
      *   3. Kick off the network call on a background thread
      */
     private void joinGame(String host, String name) {
+        this.lastHost = host;
         this.lastName = name;
         stage.setTitle("Bomberman — " + name + " → " + host);
 
@@ -127,6 +129,12 @@ public class GameApp extends Application {
 
         client.setOnGameOver(gameOver ->
                 Platform.runLater(() -> showGameOver(gameOver))
+        );
+
+        client.setOnSessionClosed(reason ->
+                Platform.runLater(() ->
+                        returnToMenu(lastHost, lastName, reason)
+                )
         );
 
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
@@ -178,7 +186,7 @@ public class GameApp extends Application {
                     }
                 },
                 () -> client.send(new StartGameCommand()),
-                () -> returnToMenu("", lastName, null)
+                () -> returnToMenu(lastHost, lastName, null)
         ));
     }
 
@@ -204,7 +212,7 @@ public class GameApp extends Application {
 
         scene.setRoot(GameOverScreen.create(
                 message,
-                () -> returnToMenu("", lastName, null)
+                () -> returnToMenu(lastHost, lastName, null)
         ));
     }
 

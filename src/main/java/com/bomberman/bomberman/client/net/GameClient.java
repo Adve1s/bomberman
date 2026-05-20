@@ -42,6 +42,7 @@ public class GameClient {
     private volatile Consumer<String> onJoinRejectedCallback;
     private volatile Consumer<LobbyState> onLobbyStateCallback;
     private volatile Consumer<GameOver> onGameOverCallback;
+    private volatile Consumer<String> onSessionClosedCallback;
 
     public GameClient(String playerName) {
         this.playerName = playerName;
@@ -123,6 +124,10 @@ public class GameClient {
         this.onGameOverCallback = callback;
     }
 
+    public void setOnSessionClosed(Consumer<String> callback) {
+        this.onSessionClosedCallback = callback;
+    }
+
     // Network thread
 
     private void handleReceived(NetworkMessage message) {
@@ -157,6 +162,12 @@ public class GameClient {
                 } else {
                     System.out.println("[client] game over: player " + gameOver.getWinnerPlayerId() + " wins");
                 }
+            }
+
+            case SessionClosed sessionClosed -> {
+                Consumer<String> cb = this.onSessionClosedCallback;
+                if (cb != null) cb.accept(sessionClosed.getReason());
+                System.out.println("[client] session closed: " + sessionClosed.getReason());
             }
 
             case LobbyState lobbyState -> {
