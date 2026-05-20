@@ -45,7 +45,6 @@ public class Renderer {
     private static final Color COLOR_BOX   = Color.rgb(180, 130, 70);
 
     // Entity colors
-    private static final Color COLOR_BOMB       = Color.rgb(30, 30, 30);
     private static final Color COLOR_PINECONE_BASE = Color.rgb(125, 85, 45);
     private static final Color COLOR_PINECONE_DARK = Color.rgb(85, 55, 30);
     private static final Color COLOR_PINECONE_LIGHT = Color.rgb(165, 120, 75);
@@ -118,7 +117,7 @@ public class Renderer {
 
                 graphicsContext.fillRect(x, y, Constants.TILE_SIZE, Constants.TILE_SIZE);
                 if (tile == Tile.FLOOR) {
-                    drawPixelGrassDetails(x, y, row, col);
+                    drawPixelTextureDetails(x, y, row, col, COLOR_GRASS_DARK, COLOR_GRASS_LIGHT);
                 }
                 if (tile == Tile.WALL) {
                     if (isOuterBorderTile(map, row, col)) {
@@ -141,13 +140,12 @@ public class Renderer {
         return row == 0 || col == 0 || row == map.getRows() - 1 || col == map.getCols() - 1;
     }
 
-    private void drawPixelGrassDetails(double x, double y, int row, int col) {
+    private void drawPixelTextureDetails(double x, double y, int row, int col, Color darkColor, Color lightColor) {
         int gridSize = 8;
         double cell = Constants.TILE_SIZE / (double) gridSize;
 
         for (int gy = 0; gy < gridSize; gy++) {
             for (int gx = 0; gx < gridSize; gx++) {
-
                 int hash = row * 73856093
                         ^ col * 19349663
                         ^ gx * 83492791
@@ -157,10 +155,10 @@ public class Renderer {
                 int value = hash % 100;
 
                 if (value < 12) {
-                    graphicsContext.setFill(COLOR_GRASS_DARK);
+                    graphicsContext.setFill(darkColor);
                     graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
                 } else if (value < 24) {
-                    graphicsContext.setFill(COLOR_GRASS_LIGHT);
+                    graphicsContext.setFill(lightColor);
                     graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
                 }
             }
@@ -172,7 +170,7 @@ public class Renderer {
 
         graphicsContext.setFill(COLOR_STONE_GROUND);
         graphicsContext.fillRect(x, y, size, size);
-        drawStoneGroundDetails(x, y, row, col);
+        drawPixelTextureDetails(x, y, row, col, COLOR_STONE_GROUND_DARK, COLOR_STONE_GROUND_LIGHT);
 
         int variant = Math.abs(row * 31 + col * 17) % 3;
 
@@ -235,31 +233,6 @@ public class Renderer {
         );
     }
 
-    private void drawStoneGroundDetails(double x, double y, int row, int col) {
-        int gridSize = 8;
-        double cell = Constants.TILE_SIZE / (double) gridSize;
-
-        for (int gy = 0; gy < gridSize; gy++) {
-            for (int gx = 0; gx < gridSize; gx++) {
-                int hash = row * 73856093
-                        ^ col * 19349663
-                        ^ gx * 83492791
-                        ^ gy * 1234567;
-
-                hash = Math.abs(hash);
-                int value = hash % 100;
-
-                if (value < 10) {
-                    graphicsContext.setFill(COLOR_STONE_GROUND_DARK);
-                    graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
-                } else if (value < 20) {
-                    graphicsContext.setFill(COLOR_STONE_GROUND_LIGHT);
-                    graphicsContext.fillRect(x + gx * cell, y + gy * cell, cell, cell);
-                }
-            }
-        }
-    }
-
     private void drawBushWall(double x, double y, int row, int col) {
         double size = Constants.TILE_SIZE;
 
@@ -301,7 +274,7 @@ public class Renderer {
 
         graphicsContext.setFill(COLOR_FLOOR);
         graphicsContext.fillRect(x, y, size, size);
-        drawPixelGrassDetails(x, y, row, col);
+        drawPixelTextureDetails(x, y, row, col, COLOR_GRASS_DARK, COLOR_GRASS_LIGHT);
 
         int variant = Math.abs(row * 31 + col * 17) % 3;
 
@@ -539,19 +512,189 @@ public class Renderer {
             if (!explosion.isActive()) continue;
 
             double alpha = Math.max(0.3, explosion.getLifetime() / Constants.EXPLOSION_DURATION_SECONDS);
-            graphicsContext.setFill(Color.color(
-                    COLOR_EXPLOSION.getRed(),
-                    COLOR_EXPLOSION.getGreen(),
-                    COLOR_EXPLOSION.getBlue(),
-                    alpha
-            ));
-            graphicsContext.fillRect(
-                    explosion.getPixelX() + EXPLOSION_PADDING,
-                    explosion.getPixelY() + EXPLOSION_PADDING,
-                    Constants.TILE_SIZE - EXPLOSION_PADDING * 2,
-                    Constants.TILE_SIZE - EXPLOSION_PADDING * 2
-            );
+
+            drawForestExplosion(explosion.getPixelX(),explosion.getPixelY(),alpha);
         }
+    }
+
+    private void drawForestExplosion(double x, double y, double alpha) {
+        double size = Constants.TILE_SIZE;
+
+        Color outerFire = Color.rgb(210, 70, 25, alpha);
+        Color middleFire = Color.rgb(255, 130, 35, alpha);
+        Color innerFire = Color.rgb(255, 220, 80, alpha);
+        Color woodPiece = Color.rgb(75, 40, 20, Math.max(0.75, alpha));
+        Color woodPieceLight = Color.rgb(150, 90, 45, Math.max(0.75, alpha));
+
+        graphicsContext.setFill(outerFire);
+        graphicsContext.fillOval(
+                x + size * 0.08,
+                y + size * 0.08,
+                size * 0.84,
+                size * 0.84
+        );
+
+        graphicsContext.setFill(middleFire);
+        graphicsContext.fillOval(
+                x + size * 0.16,
+                y + size * 0.16,
+                size * 0.68,
+                size * 0.68
+        );
+
+        graphicsContext.setFill(innerFire);
+        graphicsContext.fillOval(
+                x + size * 0.30,
+                y + size * 0.30,
+                size * 0.40,
+                size * 0.40
+        );
+
+        graphicsContext.setFill(outerFire);
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.50,
+                        x + size * 0.38,
+                        x + size * 0.62
+                },
+                new double[] {
+                        y + size * 0.02,
+                        y + size * 0.32,
+                        y + size * 0.32
+                },
+                3
+        );
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.50,
+                        x + size * 0.38,
+                        x + size * 0.62
+                },
+                new double[] {
+                        y + size * 0.98,
+                        y + size * 0.68,
+                        y + size * 0.68
+                },
+                3
+        );
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.02,
+                        x + size * 0.32,
+                        x + size * 0.32
+                },
+                new double[] {
+                        y + size * 0.50,
+                        y + size * 0.38,
+                        y + size * 0.62
+                },
+                3
+        );
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.98,
+                        x + size * 0.68,
+                        x + size * 0.68
+                },
+                new double[] {
+                        y + size * 0.50,
+                        y + size * 0.38,
+                        y + size * 0.62
+                },
+                3
+        );
+
+        graphicsContext.setFill(woodPiece);
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.12,
+                        x + size * 0.30,
+                        x + size * 0.23
+                },
+                new double[] {
+                        y + size * 0.18,
+                        y + size * 0.24,
+                        y + size * 0.38
+                },
+                3
+        );
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.70,
+                        x + size * 0.88,
+                        x + size * 0.76
+                },
+                new double[] {
+                        y + size * 0.16,
+                        y + size * 0.25,
+                        y + size * 0.40
+                },
+                3
+        );
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.14,
+                        x + size * 0.32,
+                        x + size * 0.24
+                },
+                new double[] {
+                        y + size * 0.78,
+                        y + size * 0.70,
+                        y + size * 0.58
+                },
+                3
+        );
+
+        graphicsContext.fillPolygon(
+                new double[] {
+                        x + size * 0.72,
+                        x + size * 0.88,
+                        x + size * 0.78
+                },
+                new double[] {
+                        y + size * 0.78,
+                        y + size * 0.68,
+                        y + size * 0.56
+                },
+                3
+        );
+
+        graphicsContext.setFill(woodPieceLight);
+
+        graphicsContext.fillOval(
+                x + size * 0.20,
+                y + size * 0.46,
+                size * 0.16,
+                size * 0.08
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.64,
+                y + size * 0.46,
+                size * 0.16,
+                size * 0.08
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.43,
+                y + size * 0.16,
+                size * 0.14,
+                size * 0.07
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.43,
+                y + size * 0.76,
+                size * 0.14,
+                size * 0.07
+        );
     }
 
     private void drawPlayers(GameStateView state) {
