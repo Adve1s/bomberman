@@ -33,6 +33,10 @@ public class GameState implements GameStateView {
     private double lastShrinkTime;
     private final List<WarningTile> warningTiles;
 
+    // Win/loose check
+    private int winnerPlayerId;
+    private boolean draw;
+
     private boolean gameOver;
 
     public GameState() {
@@ -49,6 +53,8 @@ public class GameState implements GameStateView {
         this.lastShrinkTime = 0;
         this.roundTime = 0;
         this.gameOver = false;
+        this.winnerPlayerId = -1;
+        this.draw = false;
     }
 
     // GameStateView (read-only, used by Renderer)
@@ -176,6 +182,26 @@ public class GameState implements GameStateView {
 
     public void addWarningTile(int row, int col, double startTime) {
         warningTiles.add(new WarningTile(row, col, startTime));
+    }
+
+    public int getWinnerPlayerId() {
+        return winnerPlayerId;
+    }
+
+    public boolean isDraw() {
+        return draw;
+    }
+
+    public void setWinner(int winnerPlayerId) {
+        this.winnerPlayerId = winnerPlayerId;
+        this.draw = false;
+        this.gameOver = true;
+    }
+
+    public void setDraw() {
+        this.winnerPlayerId = -1;
+        this.draw = true;
+        this.gameOver = true;
     }
 
     public void setGameOver(boolean gameOver) {

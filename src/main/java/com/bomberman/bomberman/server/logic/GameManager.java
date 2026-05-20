@@ -137,7 +137,7 @@ public class GameManager {
         state.flushQueues();
 
         // 8. Win/lose check
-        // TODO (teammate C): check if only one player alive
+        checkWinCondition(state);
     }
 
     // Collision checks
@@ -364,6 +364,30 @@ public class GameManager {
 
                 state.queueExplosion(new Explosion(r, c));
             }
+        }
+    }
+
+    private void checkWinCondition(GameState state){
+        int alivePlayers = 0;
+        int lastAliveId = -1;
+
+        for (Player player : state.getPlayers()){
+            if(player.isAlive()){
+                alivePlayers++;
+                lastAliveId = player.getPlayerId();
+            }
+        }
+
+        if (alivePlayers <= 1){
+
+            if (alivePlayers == 1){
+                state.setWinner(lastAliveId);
+            } else {
+                state.setDraw();
+            }
+
+            state.setGameOver(true);
+            System.out.println("GAME OVER!");
         }
     }
 }

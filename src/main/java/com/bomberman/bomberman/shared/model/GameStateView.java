@@ -24,5 +24,9 @@ public interface GameStateView {
 
     double getRoundTime();
 
+    int getWinnerPlayerId();
+
+    boolean isDraw();
+
     boolean isGameOver();
 }

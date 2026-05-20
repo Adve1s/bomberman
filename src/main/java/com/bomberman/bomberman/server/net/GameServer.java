@@ -59,6 +59,7 @@ public class GameServer {
     private final GameManager gameManager;
     private boolean gameStarted = false;
     private long previousTickNanos;
+    private boolean gameEndedBroadcasted = false;
 
     // Cross-thread
 
@@ -237,7 +238,14 @@ public class GameServer {
             gameManager.update(state, delta);
 
             // 4. Broadcast snapshot.
-            // TODO (teammate C): also broadcast GameOver when the win condition triggers.
+            if (state.isGameOver()) {
+                if (!gameEndedBroadcasted) {
+                    kryoServer.sendToAllTCP(new GameOver(state.getWinnerPlayerId(), state.isDraw()));
+                    gameEndedBroadcasted = true;
+                }
+                return;
+            }
+
             kryoServer.sendToAllTCP(new StateSnapshot(state));
 
         } catch (Exception e) {
