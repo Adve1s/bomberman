@@ -5,9 +5,6 @@ import java.util.List;
 /**
  * Broadcast to all clients in the lobby whenever someone joins, leaves,
  * or toggles ready. Lists currently connected players.
- *
- * Teammate A: feel free to extend this with ready states or other fields
- * as your UI requires.
  */
 public class LobbyState implements ServerToClientMessage {
     private final List<Integer> playerIds;

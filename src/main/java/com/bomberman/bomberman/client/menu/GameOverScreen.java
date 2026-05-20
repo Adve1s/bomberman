@@ -6,6 +6,11 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
+/**
+ * End-of-match screen shown when the server sends a {@link com.bomberman.bomberman.shared.network.GameOver}.
+ * Displays the match result (win, loss, or draw) and allows the player to
+ * return to the main menu.
+ */
 public class GameOverScreen {
 
     public static Parent create(String message, Runnable onExitClicked) {

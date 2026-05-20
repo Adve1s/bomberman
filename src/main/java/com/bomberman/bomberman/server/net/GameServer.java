@@ -145,18 +145,12 @@ public class GameServer {
     }
 
     private void handleDisconnected(Connection connection) {
-        int oldHostPlayerId = getHostPlayerId();
         // TODO (teammate B): remove the player from GameState (queue via pendingActions),
         // broadcast PlayerLeft, end the game if only one player remains.
         // Important to remove Player from GameState since we reuse PlayerId
         PlayerSession session = sessionsByConnection.remove(connection.getID());
         if (session != null) {
             System.out.println("[server] player " + session.playerId + " disconnected");
-
-            if (session.playerId == oldHostPlayerId) {
-                kryoServer.sendToAllTCP(new SessionClosed("Host left the game"));
-                return;
-            }
 
             // Refresh lobby for remaining clients after someone leaves
             broadcastLobbyState();
@@ -279,6 +273,15 @@ public class GameServer {
     }
 
     // Helpers
+
+    /**
+     * Closes the current hosted session for all connected clients.
+     * Sends a {@link SessionClosed} message with the provided reason so clients
+     * can return to the main menu before the embedded server shuts down.
+     */
+    public void closeSession(String reason) {
+        kryoServer.sendToAllTCP(new SessionClosed(reason));
+    }
 
     private void broadcastLobbyState() {
         List<PlayerSession> sortedSessions = sessionsByConnection.values().stream()

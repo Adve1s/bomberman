@@ -73,6 +73,7 @@ public class GameApp extends Application {
     }
 
     private void shutdown() {
+        if (inProcessServer != null) { inProcessServer.closeSession("Host left the game"); }
         if (runner != null)          { runner.stop();            runner = null; }
         if (client != null)          { client.disconnect();      client = null; }
         if (inProcessServer != null) { inProcessServer.stop();   inProcessServer = null; }

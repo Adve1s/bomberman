@@ -124,6 +124,12 @@ public class GameClient {
         this.onGameOverCallback = callback;
     }
 
+    /**
+     * Sets a callback to run when the server sends SessionClosed.
+     * The callback receives the reason why the current session was closed.
+     * Threading: the callback fires on the network thread, not the FX
+     * thread. If it touches the UI, wrap the body in {@code Platform.runLater}.
+     */
     public void setOnSessionClosed(Consumer<String> callback) {
         this.onSessionClosedCallback = callback;
     }
