@@ -87,7 +87,7 @@ public class GameServer {
             @Override public void disconnected(Connection connection) { handleDisconnected(connection); }
             @Override public void received(Connection connection, Object object) {
                 // KryoNet fires received() for its internal framework messages too
-                // (keepalives, etc). Filter to our types only.
+                // (keepalives, "etc."). Filter to our types only.
                 if (object instanceof NetworkMessage message) {
                     handleReceived(connection, message);
                 }
@@ -148,12 +148,31 @@ public class GameServer {
     }
 
     private void handleDisconnected(Connection connection) {
-        // TODO (teammate B): remove the player from GameState (queue via pendingActions),
-        // broadcast PlayerLeft, end the game if only one player remains.
-        // Important to remove Player from GameState since we reuse PlayerId
         PlayerSession session = sessionsByConnection.remove(connection.getID());
         if (session != null) {
             System.out.println("[server] player " + session.playerId + " disconnected");
+
+            // Defer GameState mutation to the tick thread.
+            pendingActions.add(() -> {
+                // 1) Remove player from GameState so the ID is freed and renderer/logic stop using it.
+                state.getPlayers().removeIf(p -> p.getPlayerId() == session.playerId);
+
+                // 2) Notify remaining clients that this player left.
+                kryoServer.sendToAllTCP(new PlayerLeft(session.playerId));
+
+                // 3) If a game was running, check win condition: if <=1 players remain, end the game.
+                //    This is a minimal server-side resolution: mark game over and broadcast GameOver.
+                int remaining = state.getPlayers().size();
+                if (gameStarted && !state.isGameOver() && remaining <= 1) {
+                    int winner = -1;
+                    boolean draw = (remaining == 0);
+                    if (remaining == 1) {
+                        winner = state.getPlayers().get(0).getPlayerId();
+                    }
+                    state.setGameOver(true);
+                    kryoServer.sendToAllTCP(new GameOver(winner, draw));
+                }
+            });
         }
     }
 
@@ -178,7 +197,7 @@ public class GameServer {
             }
 
             case Ping ping -> {
-                // TODO (teammate B): connection.sendTCP(new Pong(ping.getClientTimestamp()));
+                connection.sendTCP(new Pong(ping.getClientTimestamp()));
             }
 
             case ReadyCommand ready -> {

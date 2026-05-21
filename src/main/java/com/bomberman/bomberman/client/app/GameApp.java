@@ -12,6 +12,8 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import com.bomberman.bomberman.client.hud.GameHud;
+import javafx.scene.Parent;
 
 import java.io.IOException;
 import java.util.List;
@@ -122,7 +124,8 @@ public class GameApp extends Application {
 
     private void switchToGameScene() {
         Canvas canvas = new Canvas(Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
-        scene.setRoot(new StackPane(canvas));
+        Parent hud = com.bomberman.bomberman.client.hud.GameHud.create(client);
+        scene.setRoot(new StackPane(canvas, hud)); // hud stacks above the canvas
 
         runner = new NetworkedGameRunner(canvas, client);
         runner.start(scene);
