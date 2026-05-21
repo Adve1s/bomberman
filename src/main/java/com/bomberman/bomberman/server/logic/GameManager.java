@@ -137,7 +137,7 @@ public class GameManager {
         state.flushQueues();
 
         // 8. Win/lose check
-        //checkWinCondition(state);
+        checkWinCondition(state);
     }
 
     // Collision checks
