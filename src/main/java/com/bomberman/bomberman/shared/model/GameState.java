@@ -85,7 +85,7 @@ public class GameState implements GameStateView {
     }
 
     @Override
-    public List<WarningTile> getWarningTiles() {
+    public List<? extends WarningTileView> getWarningTiles() {
         return warningTiles;
     }
 

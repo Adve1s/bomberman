@@ -4,7 +4,7 @@ import com.bomberman.bomberman.shared.entity.*;
 import com.bomberman.bomberman.shared.model.GameMap;
 import com.bomberman.bomberman.shared.model.GameState;
 import com.bomberman.bomberman.shared.model.Tile;
-import com.bomberman.bomberman.shared.model.WarningTile;
+import com.bomberman.bomberman.shared.entity.WarningTile;
 import com.bomberman.bomberman.shared.util.Constants;
 import com.bomberman.bomberman.shared.util.Direction;
 import java.util.Iterator;
@@ -137,7 +137,7 @@ public class GameManager {
         state.flushQueues();
 
         // 8. Win/lose check
-        checkWinCondition(state);
+        //checkWinCondition(state);
     }
 
     // Collision checks
@@ -163,21 +163,22 @@ public class GameManager {
     // Power up collision checks
 
     private void checkPowerUpCollisions(GameState state){
-        for (Player player : state.getPlayers()){
-            for (PowerUp powerUp : state.getPowerUps()){
-                if (!powerUp.isActive()) continue;
+        for (PowerUp powerUp : state.getPowerUps()){
+            if (!powerUp.isActive()) continue;
 
-                if (player.getCol() == powerUp.getCol() && player.getRow() == powerUp.getRow()){
-                    PowerUp.PowerUpType type = powerUp.getType();
+            int row = powerUp.getRow();
+            int col = powerUp.getCol();
 
-                    switch (type){
-                        case EXTRA_RANGE -> player.addExplosionRange(Constants.RANGE_EFFECT);
-                        case SPEED_BOOST -> player.addSpeed(Constants.SPEED_EFFECT);
-                        case EXTRA_BOMB -> player.addBombCapacity(Constants.BOMB_EFFECT);
-                    }
+            for (Player player : CollisionDetector.getPlayersAt(state, row, col)){
+                PowerUp.PowerUpType type = powerUp.getType();
 
-                    powerUp.destroy();
+                switch (type){
+                    case EXTRA_RANGE -> player.addExplosionRange(Constants.RANGE_EFFECT);
+                    case SPEED_BOOST -> player.addSpeed(Constants.SPEED_EFFECT);
+                    case EXTRA_BOMB -> player.addBombCapacity(Constants.BOMB_EFFECT);
                 }
+
+                powerUp.destroy();
             }
         }
     }
@@ -244,10 +245,12 @@ public class GameManager {
     private void updateWarningTiles(GameState state) {
         double now = state.getRoundTime();
 
-        Iterator<WarningTile> it = state.getWarningTiles().iterator();
+        Iterator<? extends WarningTileView> it = state.getWarningTiles().iterator();
 
         while (it.hasNext()) {
-            WarningTile tile = it.next();
+            WarningTileView tile = it.next();
+
+            if (tile.getStartTime() == 0) continue; // safety (optional)
 
             if (tile.shouldBecomeWall(now, Constants.WARNING_WALL_DURATION)) {
 
@@ -256,49 +259,17 @@ public class GameManager {
 
                 state.getGameMap().setTile(row, col, Tile.WALL);
 
-                // kill players when the wall becomes a real wall
-                double tileX = col * Constants.TILE_SIZE;
-                double tileY = row * Constants.TILE_SIZE;
-
-                for (Player player : state.getPlayers()) {
-
-                    double playerLeft =
-                            player.getPixelX() + Constants.PLAYER_HITBOX_OFFSET;
-
-                    double playerTop =
-                            player.getPixelY() + Constants.PLAYER_HITBOX_OFFSET;
-
-                    double playerRight =
-                            playerLeft + Constants.PLAYER_HITBOX_SIZE;
-
-                    double playerBottom =
-                            playerTop + Constants.PLAYER_HITBOX_SIZE;
-
-                    double tileRight = tileX + Constants.TILE_SIZE;
-                    double tileBottom = tileY + Constants.TILE_SIZE;
-
-                    boolean overlaps =
-                            playerRight > tileX &&
-                                    playerLeft < tileRight &&
-                                    playerBottom > tileY &&
-                                    playerTop < tileBottom;
-
-                    if (overlaps) {
-                        player.kill();
-                    }
+                for (Player player : CollisionDetector.getPlayersOverlappingTile(state, row, col)) {
+                    player.kill();
                 }
 
-                // destroy power ups when the wall becomes a real wall
                 for (PowerUp powerUp : state.getPowerUps()) {
-
-                    if (powerUp.getRow() == row &&
-                            powerUp.getCol() == col) {
-
+                    if (powerUp.getRow() == row && powerUp.getCol() == col) {
                         powerUp.destroy();
                     }
                 }
 
-                it.remove();
+                it.remove(); // OK because we're iterating the real list
             }
         }
     }
