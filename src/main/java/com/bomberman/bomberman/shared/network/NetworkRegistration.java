@@ -40,6 +40,9 @@ public final class NetworkRegistration {
         kryo.register(Tile[].class);
         kryo.register(Tile[][].class);
 
+        // Warning wall
+        kryo.register(WarningTile.class);
+
         // Collection
         kryo.register(ArrayList.class);
 
@@ -60,5 +63,6 @@ public final class NetworkRegistration {
         kryo.register(PlayerLeft.class);
         kryo.register(Pong.class);
         kryo.register(GameOver.class);
+        kryo.register(SessionClosed.class);
     }
 }

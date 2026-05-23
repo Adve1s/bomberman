@@ -20,5 +20,13 @@ public interface GameStateView {
 
     List<? extends PowerUpView> getPowerUpViews();
 
+    List<? extends WarningTileView> getWarningTiles();
+
+    double getRoundTime();
+
+    int getWinnerPlayerId();
+
+    boolean isDraw();
+
     boolean isGameOver();
 }

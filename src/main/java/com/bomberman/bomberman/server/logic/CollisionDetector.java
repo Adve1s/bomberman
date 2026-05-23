@@ -96,4 +96,40 @@ public final class CollisionDetector {
                 .filter(p -> p.isAlive() && p.getRow() == row && p.getCol() == col)
                 .toList();
     }
+
+    /**
+     * Returns all alive players whose hitbox overlaps the given tile.
+     */
+    public static List<Player> getPlayersOverlappingTile(
+            GameState state,
+            int row,
+            int col
+    ) {
+        double tileX = col * Constants.TILE_SIZE;
+        double tileY = row * Constants.TILE_SIZE;
+
+        double tileRight = tileX + Constants.TILE_SIZE;
+        double tileBottom = tileY + Constants.TILE_SIZE;
+
+        return state.getPlayers().stream().filter(Player::isAlive).filter(player -> {
+
+                    double playerLeft =
+                            player.getPixelX() + Constants.PLAYER_HITBOX_OFFSET;
+
+                    double playerTop =
+                            player.getPixelY() + Constants.PLAYER_HITBOX_OFFSET;
+
+                    double playerRight =
+                            playerLeft + Constants.PLAYER_HITBOX_SIZE;
+
+                    double playerBottom =
+                            playerTop + Constants.PLAYER_HITBOX_SIZE;
+
+                    return playerRight > tileX &&
+                            playerLeft < tileRight &&
+                            playerBottom > tileY &&
+                            playerTop < tileBottom;
+                })
+                .toList();
+    }
 }

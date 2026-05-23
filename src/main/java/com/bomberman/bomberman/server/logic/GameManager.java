@@ -4,8 +4,10 @@ import com.bomberman.bomberman.shared.entity.*;
 import com.bomberman.bomberman.shared.model.GameMap;
 import com.bomberman.bomberman.shared.model.GameState;
 import com.bomberman.bomberman.shared.model.Tile;
+import com.bomberman.bomberman.shared.entity.WarningTile;
 import com.bomberman.bomberman.shared.util.Constants;
 import com.bomberman.bomberman.shared.util.Direction;
+import java.util.Iterator;
 
 /**
  * The game brain. Runs all game logic against a GameState.
@@ -102,6 +104,7 @@ public class GameManager {
      */
     public void update(GameState state, double deltaTime) {
         if (state.isGameOver()) return;
+        state.addRoundTime(deltaTime);
 
         // 1. Update all entities (player syncs grid pos, bombs tick, explosions fade)
         state.getPlayers().forEach(p -> p.update(deltaTime));
@@ -117,24 +120,11 @@ public class GameManager {
 
         // 3. Collision checks
         checkExplosionCollisions(state);
-        // TODO (teammate C): player vs power-up (pickup)
+        checkPowerUpCollisions(state);
 
         // 4. Game progression
-
-        // TODO (teammate C): shrinking map / sudden death / round timer.
-        // Typical Bomberman progression: after ~60s, start marking border tiles
-        // as WALL one per second spiraling inward, forcing players together.
-        // Players standing on a newly-walled tile die.
-        //
-        // You'll need:
-        //   - A round-elapsed-time field on GameState (incremented here each tick)
-        //   - A "next-tile-to-claim" pointer or a spiral coordinate generator
-        //   - Per-tick check: if elapsed time crossed the next threshold, mark
-        //     the next tile as WALL via map.setTile(r, c, Tile.WALL) and kill
-        //     any player(s) standing on it (CollisionDetector.getPlayersAt)
-        //
-        // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
-        // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
+        updateGameProgression(state);
+        updateWarningTiles(state);
 
         // 5. Remove inactive entities
         state.getBombs().removeIf(b -> !b.isActive());
@@ -145,7 +135,7 @@ public class GameManager {
         state.flushQueues();
 
         // 7. Win/lose check
-        // TODO (teammate C): check if only one player alive
+        checkWinCondition(state);
     }
 
     // Collision checks
@@ -164,6 +154,105 @@ public class GameManager {
             Bomb bomb = CollisionDetector.getBombAt(state, row, col);
             if (bomb != null) {
                 detonateBomb(state, bomb);
+            }
+        }
+    }
+
+    // Power up collision checks
+
+    private void checkPowerUpCollisions(GameState state){
+        for (PowerUp powerUp : state.getPowerUps()){
+            if (!powerUp.isActive()) continue;
+
+            int row = powerUp.getRow();
+            int col = powerUp.getCol();
+
+            for (Player player : CollisionDetector.getPlayersAt(state, row, col)){
+                PowerUp.PowerUpType type = powerUp.getType();
+
+                switch (type){
+                    case EXTRA_RANGE -> player.addExplosionRange(Constants.RANGE_EFFECT);
+                    case SPEED_BOOST -> player.addSpeed(Constants.SPEED_EFFECT);
+                    case EXTRA_BOMB -> player.addBombCapacity(Constants.BOMB_EFFECT);
+                }
+
+                powerUp.destroy();
+            }
+        }
+    }
+
+    // Game progression
+
+    private void updateGameProgression(GameState state){
+        double now = state.getRoundTime();
+
+        while (now - state.getLastShrinkTime() >= Constants.SHRINK_INTERVAL) {
+
+            shrinkMap(state);
+
+            state.setLastShrinkTime(state.getLastShrinkTime() + Constants.SHRINK_INTERVAL);
+            state.increaseShrinkLayer();
+        }
+    }
+
+    private void shrinkMap(GameState state) {
+        GameMap map = state.getGameMap();
+
+        int layer = state.getShrinkLayer() + 1;
+        int rows = map.getRows();
+        int cols = map.getCols();
+
+        int maxLayer = Math.min(rows, cols) / 2;
+
+        if (layer > maxLayer) {
+            return;
+        }
+
+        // top & bottom
+        for (int c = layer; c < cols - layer; c++) {
+            markWarning(state, layer, c);
+            markWarning(state, rows - 1 - layer, c);
+        }
+
+        // left & right
+        for (int r = layer + 1; r < rows - layer - 1; r++) {
+            markWarning(state, r, layer);
+            markWarning(state, r, cols - 1 - layer);
+        }
+    }
+
+    private void markWarning(GameState state, int r, int c) {
+        state.addWarningTile(r, c, state.getRoundTime());
+    }
+
+    private void updateWarningTiles(GameState state) {
+        double now = state.getRoundTime();
+
+        Iterator<? extends WarningTileView> it = state.getWarningTiles().iterator();
+
+        while (it.hasNext()) {
+            WarningTileView tile = it.next();
+
+            if (tile.getStartTime() == 0) continue; // safety (optional)
+
+            if (tile.shouldBecomeWall(now, Constants.WARNING_WALL_DURATION)) {
+
+                int row = tile.getRow();
+                int col = tile.getCol();
+
+                state.getGameMap().setTile(row, col, Tile.WALL);
+
+                for (Player player : CollisionDetector.getPlayersOverlappingTile(state, row, col)) {
+                    player.kill();
+                }
+
+                for (PowerUp powerUp : state.getPowerUps()) {
+                    if (powerUp.getRow() == row && powerUp.getCol() == col) {
+                        powerUp.destroy();
+                    }
+                }
+
+                it.remove(); // OK because we're iterating the real list
             }
         }
     }
@@ -204,12 +293,55 @@ public class GameManager {
                 if (tile == Tile.BOX) {
                     map.setTile(r, c, Tile.FLOOR);
                     state.queueExplosion(new Explosion(r, c));
-                    // TODO (teammate C): random chance to spawn power-up here
+
+                    double spawnChance = Constants.SPAWN_CHANCE;
+                    double typeRoll = Math.random();
+
+                    if (typeRoll <= spawnChance){
+                        int type = (int)(Math.random() * 3);
+                        PowerUp.PowerUpType powerUpType;
+
+                        if (type == 0){
+                            powerUpType = PowerUp.PowerUpType.EXTRA_BOMB;
+                        } else if (type == 1){
+                            powerUpType = PowerUp.PowerUpType.EXTRA_RANGE;
+                        } else {
+                            powerUpType = PowerUp.PowerUpType.SPEED_BOOST;
+                        }
+
+                        PowerUp powerUp = new PowerUp(powerUpType, r, c);
+                        state.queuePowerUp(powerUp);
+                    }
+
                     break;
                 }
 
                 state.queueExplosion(new Explosion(r, c));
             }
+        }
+    }
+
+    private void checkWinCondition(GameState state){
+        int alivePlayers = 0;
+        int lastAliveId = -1;
+
+        for (Player player : state.getPlayers()){
+            if(player.isAlive()){
+                alivePlayers++;
+                lastAliveId = player.getPlayerId();
+            }
+        }
+
+        if (alivePlayers <= 1){
+
+            if (alivePlayers == 1){
+                state.setWinner(lastAliveId);
+            } else {
+                state.setDraw();
+            }
+
+            state.setGameOver(true);
+            System.out.println("GAME OVER!");
         }
     }
 }

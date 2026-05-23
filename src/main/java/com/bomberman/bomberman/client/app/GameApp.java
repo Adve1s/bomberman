@@ -1,10 +1,16 @@
 package com.bomberman.bomberman.client.app;
 
 import com.bomberman.bomberman.client.menu.ConnectingScreen;
+import com.bomberman.bomberman.client.menu.GameOverScreen;
+import com.bomberman.bomberman.client.menu.LobbyScreen;
 import com.bomberman.bomberman.client.menu.MainMenu;
 import com.bomberman.bomberman.client.net.GameClient;
 import com.bomberman.bomberman.client.runner.NetworkedGameRunner;
 import com.bomberman.bomberman.server.net.GameServer;
+import com.bomberman.bomberman.shared.network.GameOver;
+import com.bomberman.bomberman.shared.network.LobbyState;
+import com.bomberman.bomberman.shared.network.ReadyCommand;
+import com.bomberman.bomberman.shared.network.StartGameCommand;
 import com.bomberman.bomberman.shared.util.Constants;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -44,6 +50,9 @@ public class GameApp extends Application {
     private GameClient client;
     private NetworkedGameRunner runner;
     private GameServer inProcessServer; // non-null only when user chose Host
+    private LobbyState latestLobbyState;
+    private String lastName = "";
+    private String lastHost = "";
 
     @Override
     public void start(Stage stage) {
@@ -66,6 +75,7 @@ public class GameApp extends Application {
     }
 
     private void shutdown() {
+        if (inProcessServer != null) { inProcessServer.closeSession("Host left the game"); }
         if (runner != null)          { runner.stop();            runner = null; }
         if (client != null)          { client.disconnect();      client = null; }
         if (inProcessServer != null) { inProcessServer.stop();   inProcessServer = null; }
@@ -99,6 +109,8 @@ public class GameApp extends Application {
      *   3. Kick off the network call on a background thread
      */
     private void joinGame(String host, String name) {
+        this.lastHost = host;
+        this.lastName = name;
         stage.setTitle("Bomberman — " + name + " → " + host);
 
         // (1) transitional screen
@@ -107,6 +119,26 @@ public class GameApp extends Application {
         // (2) callback fires on the network thread — wrap UI work in Platform.runLater
         client = new GameClient(name);
         client.setOnGameStarted(() -> Platform.runLater(this::switchToGameScene));
+
+        client.setOnJoinRejected(reason ->
+                Platform.runLater(() ->
+                        returnToMenu(host, name, "Rejected: " + reason)
+                )
+        );
+
+        client.setOnLobbyState(state ->
+                Platform.runLater(() -> showLobby(state))
+        );
+
+        client.setOnGameOver(gameOver ->
+                Platform.runLater(() -> showGameOver(gameOver))
+        );
+
+        client.setOnSessionClosed(reason ->
+                Platform.runLater(() ->
+                        returnToMenu(lastHost, lastName, reason)
+                )
+        );
 
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
         Thread connectThread = new Thread(() -> {
@@ -140,6 +172,52 @@ public class GameApp extends Application {
         shutdown();
         stage.setTitle("Bomberman");
         scene.setRoot(MainMenu.create(this::joinGame, this::hostGame, lastHost, lastName, errorMessage));
+    }
+
+    private void showLobby(LobbyState state) {
+        if (client.isGameStarted()) {
+            return;
+        }
+
+        this.latestLobbyState = state;
+        scene.setRoot(LobbyScreen.create(
+                state,
+                client.getMyPlayerId(),
+                () -> {
+                    int myIndex = state.getPlayerIds().indexOf(client.getMyPlayerId());
+                    if (myIndex >= 0) {
+                        client.send(new ReadyCommand(!state.getReadyStates().get(myIndex)));
+                    }
+                },
+                () -> client.send(new StartGameCommand()),
+                () -> returnToMenu(lastHost, lastName, null)
+        ));
+    }
+
+    private void showGameOver(GameOver gameOver) {
+        String message;
+        if (gameOver.isDraw()) {
+            message = "Draw";
+        } else if (gameOver.getWinnerPlayerId() == client.getMyPlayerId()) {
+            message = "You win";
+        } else {
+            String winnerName = "Player " + gameOver.getWinnerPlayerId();
+
+            if (latestLobbyState != null) {
+                int winnerIndex = latestLobbyState.getPlayerIds().indexOf(gameOver.getWinnerPlayerId());
+
+                if (winnerIndex >= 0) {
+                    winnerName = latestLobbyState.getPlayerNames().get(winnerIndex);
+                }
+            }
+
+            message = winnerName + " wins";
+        }
+
+        scene.setRoot(GameOverScreen.create(
+                message,
+                () -> returnToMenu(lastHost, lastName, null)
+        ));
     }
 
     // Defaults / CLI args
