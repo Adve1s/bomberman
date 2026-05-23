@@ -60,5 +60,6 @@ public final class NetworkRegistration {
         kryo.register(PlayerLeft.class);
         kryo.register(Pong.class);
         kryo.register(GameOver.class);
+        kryo.register(SessionClosed.class);
     }
 }
