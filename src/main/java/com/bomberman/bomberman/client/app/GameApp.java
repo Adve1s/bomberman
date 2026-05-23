@@ -53,6 +53,7 @@ public class GameApp extends Application {
     private LobbyState latestLobbyState;
     private String lastName = "";
     private String lastHost = "";
+    private boolean atGameOver = false;
 
     @Override
     public void start(Stage stage) {
@@ -135,9 +136,18 @@ public class GameApp extends Application {
         );
 
         client.setOnSessionClosed(reason ->
-                Platform.runLater(() ->
-                        returnToMenu(lastHost, lastName, reason)
-                )
+                Platform.runLater(() -> {
+                    if (atGameOver) return;
+                    returnToMenu(lastHost, lastName, reason);
+                })
+
+        );
+
+        client.setOnDisconnected(() ->
+                Platform.runLater(() -> {
+                    if (atGameOver) return;
+                    returnToMenu(lastHost, lastName, "Lost connection to server");
+                })
         );
 
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
@@ -156,7 +166,7 @@ public class GameApp extends Application {
 
     private void switchToGameScene() {
         Canvas canvas = new Canvas(Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
-        Parent hud = com.bomberman.bomberman.client.hud.GameHud.create(client);
+        Parent hud = GameHud.create(client);
         scene.setRoot(new StackPane(canvas, hud)); // hud stacks above the canvas
 
         runner = new NetworkedGameRunner(canvas, client);
@@ -169,6 +179,8 @@ public class GameApp extends Application {
      * AND the in-process server if Host was the path that failed.
      */
     private void returnToMenu(String lastHost, String lastName, String errorMessage) {
+        if (client == null) return;
+        this.atGameOver = false;
         shutdown();
         stage.setTitle("Bomberman");
         scene.setRoot(MainMenu.create(this::joinGame, this::hostGame, lastHost, lastName, errorMessage));
@@ -214,6 +226,7 @@ public class GameApp extends Application {
             message = winnerName + " wins";
         }
 
+        this.atGameOver = true;
         scene.setRoot(GameOverScreen.create(
                 message,
                 () -> returnToMenu(lastHost, lastName, null)

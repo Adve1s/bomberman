@@ -160,23 +160,12 @@ public class GameServer {
 
                 // 2) Notify remaining clients that this player left.
                 kryoServer.sendToAllTCP(new PlayerLeft(session.playerId));
-
-                // 3) If a game was running, check win condition: if <=1 players remain, end the game.
-                //    This is a minimal server-side resolution: mark game over and broadcast GameOver.
-                int remaining = state.getPlayers().size();
-                if (gameStarted && !state.isGameOver() && remaining <= 1) {
-                    int winner = -1;
-                    boolean draw = (remaining == 0);
-                    if (remaining == 1) {
-                        winner = state.getPlayers().get(0).getPlayerId();
-                    }
-                    state.setGameOver(true);
-                    kryoServer.sendToAllTCP(new GameOver(winner, draw));
-                }
             });
 
             // Refresh lobby for remaining clients after someone leaves
-            broadcastLobbyState();
+            if (!gameStarted) {
+                broadcastLobbyState();
+            }
         }
     }
 

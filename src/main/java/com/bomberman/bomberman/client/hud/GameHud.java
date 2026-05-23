@@ -41,6 +41,11 @@ public class GameHud {
         }));
         pingUpdater.setCycleCount(Timeline.INDEFINITE);
         pingUpdater.play();
+        root.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene == null) {
+                pingUpdater.stop();
+            }
+        });
 
         // Register callbacks on the client. GameClient invokes these on the network thread,
         // so wrap UI updates in Platform.runLater.
@@ -53,13 +58,6 @@ public class GameHud {
             PauseTransition pt = new PauseTransition(Duration.seconds(3));
             pt.setOnFinished(a -> toastBox.getChildren().remove(toast));
             pt.play();
-        }));
-
-        client.setOnDisconnected(() -> Platform.runLater(() -> {
-            Label toast = new Label("Disconnected from server");
-            toast.setStyle("-fx-background-color: rgba(128,0,0,0.85); -fx-text-fill: white; -fx-padding: 6 10;");
-            toastBox.getChildren().add(toast);
-            // Keep this persistent or remove after a longer delay; here we leave it persistent.
         }));
 
         return root;

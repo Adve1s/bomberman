@@ -8,6 +8,9 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -36,10 +39,9 @@ public class GameClient {
     /** True once GameStarted arrives. */
     private volatile boolean gameStarted = false;
 
+    // Ping
     private volatile long latencyMs = -1;
-    private java.util.concurrent.ScheduledExecutorService pingExecutor;
-    private volatile java.util.function.Consumer<Integer> onPlayerLeftCallback;
-    private volatile Runnable onDisconnectedCallback;
+    private volatile ScheduledExecutorService pingExecutor;
 
     // Callback hooks. volatile because written on the FX thread (during wiring)
     // and read on the network thread (when the message arrives).
@@ -48,6 +50,8 @@ public class GameClient {
     private volatile Consumer<LobbyState> onLobbyStateCallback;
     private volatile Consumer<GameOver> onGameOverCallback;
     private volatile Consumer<String> onSessionClosedCallback;
+    private volatile Consumer<Integer> onPlayerLeftCallback;
+    private volatile Runnable onDisconnectedCallback;
 
     public GameClient(String playerName) {
         this.playerName = playerName;
@@ -74,7 +78,7 @@ public class GameClient {
         kryoClient.start();
         kryoClient.connect(CONNECT_TIMEOUT_MS, host, Constants.NETWORK_PORT);
         kryoClient.sendTCP(new JoinRequest(playerName));
-        pingExecutor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+        pingExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "ping-sender");
             t.setDaemon(true);
             return t;
@@ -88,7 +92,7 @@ public class GameClient {
                     if (ex != null) ex.shutdown();
                 }
             } catch (Exception ignored) {}
-        }, 1000, 1000, java.util.concurrent.TimeUnit.MILLISECONDS);
+        }, 1000, 1000, TimeUnit.MILLISECONDS);
         System.out.println("[client] connected to " + host + ":" + Constants.NETWORK_PORT);
     }
 
@@ -225,13 +229,13 @@ public class GameClient {
             case PlayerLeft playerLeft ->
             {
                 System.out.println("[client] player " + playerLeft.getPlayerId() + " left");
-                java.util.function.Consumer<Integer> cb = this.onPlayerLeftCallback;
+                Consumer<Integer> cb = this.onPlayerLeftCallback;
                 if (cb != null) cb.accept(playerLeft.getPlayerId());
             }
 
             case Pong pong -> {
                 latencyMs = System.currentTimeMillis() - pong.getClientTimestamp();
-                System.out.println("[client] Pong received, latency=" + latencyMs + "ms");
+                // System.out.println("[client] Pong received, latency=" + latencyMs + "ms");
             }
 
             default -> { /* other message types — ignore */ }
