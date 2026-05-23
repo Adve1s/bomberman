@@ -99,8 +99,8 @@ public class Renderer {
     // Waning wall blinking
 
     private void drawWarningWalls(GameStateView state) {
-        double phase = (state.getRoundTime() * 4) % 1.3;
-        boolean blink = phase < 0.5;
+        double phase = (state.getRoundTime() * Constants.WARNING_BLINK_SPEED) % Constants.WARNING_BLINK_CYCLE;
+        boolean blink = phase < Constants.WARNING_BLINK_VISIBLE_DURATION;
 
         if (!blink) return;
 

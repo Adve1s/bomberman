@@ -36,6 +36,7 @@ public final class Constants {
     public static final int NETWORK_OBJECT_BUFFER_SIZE = 32 * 1024;
 
     // Power up effects
+    public static final double SPAWN_CHANCE = 0.3;
     public static final int RANGE_EFFECT = 1;
     public static final double SPEED_EFFECT = 0.3;
     public static final int BOMB_EFFECT = 1;
@@ -43,4 +44,7 @@ public final class Constants {
     // Game progression
     public static final int SHRINK_INTERVAL = 60;
     public static final double WARNING_WALL_DURATION = 4.0;
+    public static final double WARNING_BLINK_SPEED = 4.0;
+    public static final double WARNING_BLINK_CYCLE = 1.3;
+    public static final double WARNING_BLINK_VISIBLE_DURATION = 0.5;
 }

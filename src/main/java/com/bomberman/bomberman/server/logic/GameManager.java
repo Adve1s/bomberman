@@ -120,23 +120,21 @@ public class GameManager {
 
         // 3. Collision checks
         checkExplosionCollisions(state);
-
-        // 4. Power up collision checks
         checkPowerUpCollisions(state);
 
-        // 5. Game progression
+        // 4. Game progression
         updateGameProgression(state);
         updateWarningTiles(state);
 
-        // 6. Remove inactive entities
+        // 5. Remove inactive entities
         state.getBombs().removeIf(b -> !b.isActive());
         state.getExplosions().removeIf(e -> !e.isActive());
         state.getPowerUps().removeIf(p -> !p.isActive());
 
-        // 7. Flush deferred queues
+        // 6. Flush deferred queues
         state.flushQueues();
 
-        // 8. Win/lose check
+        // 7. Win/lose check
         checkWinCondition(state);
     }
 
@@ -185,20 +183,6 @@ public class GameManager {
 
     // Game progression
 
-    // Typical Bomberman progression: after ~60s, start marking border tiles
-    // as WALL one per second spiraling inward, forcing players together.
-    // Players standing on a newly-walled tile die.
-    //
-    // You'll need:
-    //   - A round-elapsed-time field on GameState (incremented here each tick)
-    //   - A "next-tile-to-claim" pointer or a spiral coordinate generator
-    //   - Per-tick check: if elapsed time crossed the next threshold, mark
-    //     the next tile as WALL via map.setTile(r, c, Tile.WALL) and kill
-    //     any player(s) standing on it (CollisionDetector.getPlayersAt)
-    //
-    // Once this grows past a few lines, extract into updateGameProgression(state, deltaTime)
-    // for readability — same pattern as spawnExplosions() and checkExplosionCollisions().
-
     private void updateGameProgression(GameState state){
         double now = state.getRoundTime();
 
@@ -220,8 +204,7 @@ public class GameManager {
 
         int maxLayer = Math.min(rows, cols) / 2;
 
-        if (layer >= maxLayer) {
-            state.setGameOver(true);
+        if (layer > maxLayer) {
             return;
         }
 
@@ -311,7 +294,7 @@ public class GameManager {
                     map.setTile(r, c, Tile.FLOOR);
                     state.queueExplosion(new Explosion(r, c));
 
-                    double spawnChance = 0.3;
+                    double spawnChance = Constants.SPAWN_CHANCE;
                     double typeRoll = Math.random();
 
                     if (typeRoll <= spawnChance){
