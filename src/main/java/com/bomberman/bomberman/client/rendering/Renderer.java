@@ -1,9 +1,7 @@
 package com.bomberman.bomberman.client.rendering;
 
 import com.bomberman.bomberman.shared.entity.*;
-import com.bomberman.bomberman.shared.model.GameMapView;
-import com.bomberman.bomberman.shared.model.GameStateView;
-import com.bomberman.bomberman.shared.model.Tile;
+import com.bomberman.bomberman.shared.model.*;
 import com.bomberman.bomberman.shared.util.Constants;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
@@ -43,6 +41,7 @@ public class Renderer {
     private static final Color COLOR_STUMP_RING = Color.rgb(220, 170, 105);
 
     private static final Color COLOR_BOX   = Color.rgb(180, 130, 70);
+    private static final Color COLOR_WARNING_WALL  = Color.rgb(80, 80, 80, 0.6);
 
     // Entity colors
     private static final Color COLOR_PINECONE_BASE = Color.rgb(125, 85, 45);
@@ -53,7 +52,9 @@ public class Renderer {
     private static final Color COLOR_FUSE_SPARK_LIGHT = Color.rgb(255, 220, 90);
 
     private static final Color COLOR_EXPLOSION   = Color.rgb(255, 100, 30);
-    private static final Color COLOR_POWERUP     = Color.rgb(255, 215, 0);
+    private static final Color COLOR_POWERUP_BOMB  = Color.rgb(255, 140, 90);
+    private static final Color COLOR_POWERUP_SPEED = Color.rgb(90, 200, 255);
+    private static final Color COLOR_POWERUP_RANGE = Color.rgb(180, 120, 255);
     private static final Color COLOR_PLAYER_DEAD = Color.rgb(100, 100, 100);
 
     // Player colors by ID (supports up to 4 players)
@@ -93,6 +94,7 @@ public class Renderer {
         graphicsContext.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
 
         drawTiles(state.getGameMapView());
+        drawWarningWalls(state);
         drawPowerUps(state);
         drawBombs(state);
         drawExplosions(state);
@@ -362,13 +364,42 @@ public class Renderer {
         );
     }
 
+    // Waning wall blinking
+
+    private void drawWarningWalls(GameStateView state) {
+        double phase = (state.getRoundTime() * Constants.WARNING_BLINK_SPEED) % Constants.WARNING_BLINK_CYCLE;
+        boolean blink = phase < Constants.WARNING_BLINK_VISIBLE_DURATION;
+
+        if (!blink) return;
+
+        graphicsContext.setFill(COLOR_WARNING_WALL);
+
+        for (WarningTileView tile : state.getWarningTiles()) {
+
+            double x = tile.getCol() * Constants.TILE_SIZE;
+            double y = tile.getRow() * Constants.TILE_SIZE;
+
+            graphicsContext.fillRect(
+                    x,
+                    y,
+                    Constants.TILE_SIZE,
+                    Constants.TILE_SIZE
+            );
+        }
+    }
+
     // Entities
 
     private void drawPowerUps(GameStateView state) {
         for (PowerUpView powerUp : state.getPowerUpViews()) {
             if (!powerUp.isActive()) continue;
 
-            graphicsContext.setFill(COLOR_POWERUP);
+            switch (powerUp.getType()) {
+                case EXTRA_BOMB -> graphicsContext.setFill(COLOR_POWERUP_BOMB);
+                case SPEED_BOOST -> graphicsContext.setFill(COLOR_POWERUP_SPEED);
+                case EXTRA_RANGE -> graphicsContext.setFill(COLOR_POWERUP_RANGE);
+            }
+
             graphicsContext.fillOval(
                     powerUp.getPixelX() + POWERUP_PADDING,
                     powerUp.getPixelY() + POWERUP_PADDING,

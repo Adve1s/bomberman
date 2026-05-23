@@ -51,12 +51,16 @@ public class GameServer {
     private final Server kryoServer;
     private final ScheduledExecutorService tickExecutor;
 
+    // Server info
+
+    private volatile boolean gameStarted = false;
+
     // State (tick thread only)
 
     private final GameState state;
     private final GameManager gameManager;
-    private boolean gameStarted = false;
     private long previousTickNanos;
+    private boolean gameEndedBroadcasted = false;
 
     // Cross-thread
 
@@ -163,13 +167,16 @@ public class GameServer {
 
         switch (message) {
             // Movement: overwrite-style. Latest intent wins, applied once per tick.
-            case MoveCommand move -> session.pendingMove = new MoveCommand(
-                    Integer.signum(move.getDx()),
-                    Integer.signum(move.getDy())
-            );
+            case MoveCommand move -> {
+                if (!gameStarted) break;
+                session.pendingMove = new MoveCommand(Integer.signum(move.getDx()), Integer.signum(move.getDy()));
+            }
 
             // Bombs: count style. Every press should fire a placement attempt.
-            case PlaceBombCommand placeBomb -> session.pendingBombPresses.incrementAndGet();
+            case PlaceBombCommand placeBomb -> {
+                if (!gameStarted) break;
+                session.pendingBombPresses.incrementAndGet();
+            }
 
             case JoinRequest joinRequest -> {
                 session.name = joinRequest.getPlayerName();
@@ -231,6 +238,9 @@ public class GameServer {
             previousTickNanos = now;
             if (delta > 0.1) delta = 0.1;
 
+            // Lobby phase: keep the clock advancing but don't run game logic
+            if(!gameStarted)  return;
+
             // 1. Drain queued GameState mutations from the network thread.
             Runnable action;
             while ((action = pendingActions.poll()) != null) {
@@ -262,7 +272,14 @@ public class GameServer {
             gameManager.update(state, delta);
 
             // 4. Broadcast snapshot.
-            // TODO (teammate C): also broadcast GameOver when the win condition triggers.
+            if (state.isGameOver()) {
+                if (!gameEndedBroadcasted) {
+                    kryoServer.sendToAllTCP(new GameOver(state.getWinnerPlayerId(), state.isDraw()));
+                    gameEndedBroadcasted = true;
+                }
+                return;
+            }
+
             kryoServer.sendToAllTCP(new StateSnapshot(state));
 
         } catch (Exception e) {
