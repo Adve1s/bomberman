@@ -18,6 +18,8 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import com.bomberman.bomberman.client.hud.GameHud;
+import javafx.scene.Parent;
 
 import java.io.IOException;
 import java.util.List;
@@ -51,6 +53,7 @@ public class GameApp extends Application {
     private LobbyState latestLobbyState;
     private String lastName = "";
     private String lastHost = "";
+    private boolean atGameOver = false;
 
     @Override
     public void start(Stage stage) {
@@ -91,7 +94,7 @@ public class GameApp extends Application {
         } catch (IOException ex) {
             System.err.println("[client] couldn't start in-process server: " + ex.getMessage());
             inProcessServer = null;
-            returnToMenu("", name, "Couldn't start server: " + ex.getMessage());
+            showMenu("", name, "Couldn't start server: " + ex.getMessage());
             return;
         }
         joinGame("localhost", name);
@@ -133,9 +136,18 @@ public class GameApp extends Application {
         );
 
         client.setOnSessionClosed(reason ->
-                Platform.runLater(() ->
-                        returnToMenu(lastHost, lastName, reason)
-                )
+                Platform.runLater(() -> {
+                    if (atGameOver) return;
+                    returnToMenu(lastHost, lastName, reason);
+                })
+
+        );
+
+        client.setOnDisconnected(() ->
+                Platform.runLater(() -> {
+                    if (atGameOver) return;
+                    returnToMenu(lastHost, lastName, "Lost connection to server");
+                })
         );
 
         // (3) connect off the FX thread so the 5s timeout doesn't freeze the window
@@ -154,7 +166,8 @@ public class GameApp extends Application {
 
     private void switchToGameScene() {
         Canvas canvas = new Canvas(Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
-        scene.setRoot(new StackPane(canvas));
+        Parent hud = GameHud.create(client);
+        scene.setRoot(new StackPane(canvas, hud)); // hud stacks above the canvas
 
         runner = new NetworkedGameRunner(canvas, client);
         runner.start(scene);
@@ -166,7 +179,13 @@ public class GameApp extends Application {
      * AND the in-process server if Host was the path that failed.
      */
     private void returnToMenu(String lastHost, String lastName, String errorMessage) {
+        if (client == null) return;
+        this.atGameOver = false;
         shutdown();
+        showMenu(lastHost, lastName, errorMessage);
+    }
+
+    private void showMenu(String lastHost, String lastName, String errorMessage) {
         stage.setTitle("Bomberman");
         scene.setRoot(MainMenu.create(this::joinGame, this::hostGame, lastHost, lastName, errorMessage));
     }
@@ -211,6 +230,7 @@ public class GameApp extends Application {
             message = winnerName + " wins";
         }
 
+        this.atGameOver = true;
         scene.setRoot(GameOverScreen.create(
                 message,
                 () -> returnToMenu(lastHost, lastName, null)

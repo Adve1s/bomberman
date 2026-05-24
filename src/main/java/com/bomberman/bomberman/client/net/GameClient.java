@@ -8,6 +8,9 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -36,6 +39,10 @@ public class GameClient {
     /** True once GameStarted arrives. */
     private volatile boolean gameStarted = false;
 
+    // Ping
+    private volatile long latencyMs = -1;
+    private volatile ScheduledExecutorService pingExecutor;
+
     // Callback hooks. volatile because written on the FX thread (during wiring)
     // and read on the network thread (when the message arrives).
     private volatile Runnable onGameStartedCallback;
@@ -43,6 +50,8 @@ public class GameClient {
     private volatile Consumer<LobbyState> onLobbyStateCallback;
     private volatile Consumer<GameOver> onGameOverCallback;
     private volatile Consumer<String> onSessionClosedCallback;
+    private volatile Consumer<Integer> onPlayerLeftCallback;
+    private volatile Runnable onDisconnectedCallback;
 
     public GameClient(String playerName) {
         this.playerName = playerName;
@@ -69,11 +78,31 @@ public class GameClient {
         kryoClient.start();
         kryoClient.connect(CONNECT_TIMEOUT_MS, host, Constants.NETWORK_PORT);
         kryoClient.sendTCP(new JoinRequest(playerName));
+        pingExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "ping-sender");
+            t.setDaemon(true);
+            return t;
+        });
+        pingExecutor.scheduleAtFixedRate(() -> {
+            try {
+                if (kryoClient.isConnected()) {
+                    kryoClient.sendTCP(new Ping(System.currentTimeMillis()));
+                } else {
+                    var ex = pingExecutor;
+                    if (ex != null) ex.shutdown();
+                }
+            } catch (Exception ignored) {}
+        }, 1000, 1000, TimeUnit.MILLISECONDS);
         System.out.println("[client] connected to " + host + ":" + Constants.NETWORK_PORT);
     }
 
     public void disconnect() {
         kryoClient.stop();
+        var ex = this.pingExecutor;
+        if (ex != null) {
+            ex.shutdownNow();
+            this.pingExecutor = null;
+        }
     }
 
     public void send(ClientToServerMessage message) {
@@ -135,6 +164,20 @@ public class GameClient {
     }
 
     // Network thread
+    /** * Returns the latest measured round-trip latency in milliseconds. * Volatile long is written on the network thread and read on the FX thread. */
+    public long getLatencyMs() {
+        return latencyMs;
+    }
+
+    /** * Register a callback that runs when another player leaves. * The callback is invoked on the network thread and receives the playerId. * Callers that touch JavaFX must wrap their UI work in Platform.runLater. */
+    public void setOnPlayerLeft(java.util.function.Consumer<Integer> cb) {
+        this.onPlayerLeftCallback = cb;
+    }
+
+    /** * Register a callback that runs when this client disconnects from the server. * The callback is invoked on the network thread. UI work should be wrapped * with Platform.runLater by the caller. */
+    public void setOnDisconnected(Runnable cb) {
+        this.onDisconnectedCallback = cb;
+    }
 
     private void handleReceived(NetworkMessage message) {
         switch (message) {
@@ -185,14 +228,14 @@ public class GameClient {
 
             case PlayerLeft playerLeft ->
             {
-                // TODO (teammate B): onPlayerLeft callback for in-game notification —
-                // "Alice disconnected" overlay, etc.
                 System.out.println("[client] player " + playerLeft.getPlayerId() + " left");
+                Consumer<Integer> cb = this.onPlayerLeftCallback;
+                if (cb != null) cb.accept(playerLeft.getPlayerId());
             }
 
             case Pong pong -> {
-                // TODO (teammate B): latency = System.currentTimeMillis() - pong.getClientTimestamp();
-                System.out.println("[client] Pong received (TODO teammate B)");
+                latencyMs = System.currentTimeMillis() - pong.getClientTimestamp();
+                // System.out.println("[client] Pong received, latency=" + latencyMs + "ms");
             }
 
             default -> { /* other message types — ignore */ }
@@ -200,7 +243,8 @@ public class GameClient {
     }
 
     private void handleDisconnected() {
-        // TODO (teammate B): onDisconnected callback to show "lost connection" overlay.
-        System.out.println("[client] disconnected from server (TODO teammate B)");
+        System.out.println("[client] disconnected from server");
+        Runnable cb = this.onDisconnectedCallback;
+        if (cb != null) cb.run();
     }
 }

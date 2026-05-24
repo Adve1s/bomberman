@@ -54,10 +54,11 @@ public class GameServer {
     // Server info
 
     private volatile boolean gameStarted = false;
+    private static final long NEW_GAME_RESET_DELAY_MS = 1500;
 
     // State (tick thread only)
 
-    private final GameState state;
+    private GameState state;
     private final GameManager gameManager;
     private long previousTickNanos;
     private boolean gameEndedBroadcasted = false;
@@ -149,15 +150,23 @@ public class GameServer {
     }
 
     private void handleDisconnected(Connection connection) {
-        // TODO (teammate B): remove the player from GameState (queue via pendingActions),
-        // broadcast PlayerLeft, end the game if only one player remains.
-        // Important to remove Player from GameState since we reuse PlayerId
         PlayerSession session = sessionsByConnection.remove(connection.getID());
         if (session != null) {
             System.out.println("[server] player " + session.playerId + " disconnected");
 
+            // Defer GameState mutation to the tick thread.
+            pendingActions.add(() -> {
+                // 1) Remove player from GameState so the ID is freed and renderer/logic stop using it.
+                state.getPlayers().removeIf(p -> p.getPlayerId() == session.playerId);
+
+                // 2) Notify remaining clients that this player left.
+                kryoServer.sendToAllTCP(new PlayerLeft(session.playerId));
+            });
+
             // Refresh lobby for remaining clients after someone leaves
-            broadcastLobbyState();
+            if (!gameStarted) {
+                broadcastLobbyState();
+            }
         }
     }
 
@@ -185,7 +194,7 @@ public class GameServer {
             }
 
             case Ping ping -> {
-                // TODO (teammate B): connection.sendTCP(new Pong(ping.getClientTimestamp()));
+                connection.sendTCP(new Pong(ping.getClientTimestamp()));
             }
 
             case ReadyCommand ready -> {
@@ -276,6 +285,7 @@ public class GameServer {
                 if (!gameEndedBroadcasted) {
                     kryoServer.sendToAllTCP(new GameOver(state.getWinnerPlayerId(), state.isDraw()));
                     gameEndedBroadcasted = true;
+                    tickExecutor.schedule(this::resetForNewGame, NEW_GAME_RESET_DELAY_MS, TimeUnit.MILLISECONDS);
                 }
                 return;
             }
@@ -348,6 +358,27 @@ public class GameServer {
                 .mapToInt(session -> session.playerId)
                 .min()
                 .orElse(-1);
+    }
+
+    private void resetForNewGame() {
+        List<Connection> previousConnections = sessionsByConnection.values().stream()
+                .map(session -> session.connection)
+                .toList();
+
+        sessionsByConnection.clear();
+        pendingActions.clear();
+
+        // Brand-new world for the next match, joining reopened.
+        state = new GameState();
+        gameStarted = false;
+        gameEndedBroadcasted = false;
+        previousTickNanos = System.nanoTime();
+
+        for (Connection connection : previousConnections) {
+            connection.close();
+        }
+
+        System.out.println("[server] reset — lobby open for a new game");
     }
 
     // Per-connection state
