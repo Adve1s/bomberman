@@ -54,10 +54,11 @@ public class GameServer {
     // Server info
 
     private volatile boolean gameStarted = false;
+    private static final long NEW_GAME_RESET_DELAY_MS = 1500;
 
     // State (tick thread only)
 
-    private final GameState state;
+    private GameState state;
     private final GameManager gameManager;
     private long previousTickNanos;
     private boolean gameEndedBroadcasted = false;
@@ -284,6 +285,7 @@ public class GameServer {
                 if (!gameEndedBroadcasted) {
                     kryoServer.sendToAllTCP(new GameOver(state.getWinnerPlayerId(), state.isDraw()));
                     gameEndedBroadcasted = true;
+                    tickExecutor.schedule(this::resetForNewGame, NEW_GAME_RESET_DELAY_MS, TimeUnit.MILLISECONDS);
                 }
                 return;
             }
@@ -356,6 +358,27 @@ public class GameServer {
                 .mapToInt(session -> session.playerId)
                 .min()
                 .orElse(-1);
+    }
+
+    private void resetForNewGame() {
+        List<Connection> previousConnections = sessionsByConnection.values().stream()
+                .map(session -> session.connection)
+                .toList();
+
+        sessionsByConnection.clear();
+        pendingActions.clear();
+
+        // Brand-new world for the next match, joining reopened.
+        state = new GameState();
+        gameStarted = false;
+        gameEndedBroadcasted = false;
+        previousTickNanos = System.nanoTime();
+
+        for (Connection connection : previousConnections) {
+            connection.close();
+        }
+
+        System.out.println("[server] reset — lobby open for a new game");
     }
 
     // Per-connection state

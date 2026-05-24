@@ -94,7 +94,7 @@ public class GameApp extends Application {
         } catch (IOException ex) {
             System.err.println("[client] couldn't start in-process server: " + ex.getMessage());
             inProcessServer = null;
-            returnToMenu("", name, "Couldn't start server: " + ex.getMessage());
+            showMenu("", name, "Couldn't start server: " + ex.getMessage());
             return;
         }
         joinGame("localhost", name);
@@ -182,6 +182,10 @@ public class GameApp extends Application {
         if (client == null) return;
         this.atGameOver = false;
         shutdown();
+        showMenu(lastHost, lastName, errorMessage);
+    }
+
+    private void showMenu(String lastHost, String lastName, String errorMessage) {
         stage.setTitle("Bomberman");
         scene.setRoot(MainMenu.create(this::joinGame, this::hostGame, lastHost, lastName, errorMessage));
     }
