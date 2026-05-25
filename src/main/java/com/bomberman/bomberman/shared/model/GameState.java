@@ -203,8 +203,4 @@ public class GameState implements GameStateView {
         this.draw = true;
         this.gameOver = true;
     }
-
-    public void setGameOver(boolean gameOver) {
-        this.gameOver = gameOver;
-    }
 }

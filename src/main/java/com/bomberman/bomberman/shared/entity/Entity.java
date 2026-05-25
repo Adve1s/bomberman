@@ -64,11 +64,6 @@ public abstract class Entity implements EntityView {
 
     // Mutation (server-side only)
 
-    public void setPosition(int row, int col) {
-        this.row = row;
-        this.col = col;
-    }
-
     public void setPixelPosition(double x, double y) {
         this.pixelX = x;
         this.pixelY = y;

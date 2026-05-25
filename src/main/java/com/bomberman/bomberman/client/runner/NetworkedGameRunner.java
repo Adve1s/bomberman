@@ -53,7 +53,6 @@ public class NetworkedGameRunner {
         if (client.getMyPlayerId() == -1) return;
 
         // Movement: collect all currently-held directions into a dx/dy pair.
-        // Server normalizes diagonal speed and slides along walls per-axis.
         int dx = 0, dy = 0;
         if (inputHandler.isPressed(KeyCode.LEFT)  || inputHandler.isPressed(KeyCode.A)) dx -= 1;
         if (inputHandler.isPressed(KeyCode.RIGHT) || inputHandler.isPressed(KeyCode.D)) dx += 1;

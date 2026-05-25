@@ -233,8 +233,6 @@ public class GameManager {
         while (it.hasNext()) {
             WarningTileView tile = it.next();
 
-            if (tile.getStartTime() == 0) continue; // safety (optional)
-
             if (tile.shouldBecomeWall(now, Constants.WARNING_WALL_DURATION)) {
 
                 int row = tile.getRow();
@@ -339,8 +337,6 @@ public class GameManager {
             } else {
                 state.setDraw();
             }
-
-            state.setGameOver(true);
             System.out.println("GAME OVER!");
         }
     }
