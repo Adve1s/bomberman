@@ -50,11 +50,6 @@ public class Renderer {
     private static final Color COLOR_PINECONE_STEM = Color.rgb(95, 70, 40);
     private static final Color COLOR_FUSE_SPARK = Color.rgb(255, 170, 40);
     private static final Color COLOR_FUSE_SPARK_LIGHT = Color.rgb(255, 220, 90);
-
-    private static final Color COLOR_EXPLOSION   = Color.rgb(255, 100, 30);
-    private static final Color COLOR_POWERUP_BOMB  = Color.rgb(255, 140, 90);
-    private static final Color COLOR_POWERUP_SPEED = Color.rgb(90, 200, 255);
-    private static final Color COLOR_POWERUP_RANGE = Color.rgb(180, 120, 255);
     private static final Color COLOR_PLAYER_DEAD = Color.rgb(100, 100, 100);
 
     // Player colors by ID (supports up to 4 players)
@@ -71,10 +66,6 @@ public class Renderer {
     private static final Color COLOR_GNOME_BEARD = Color.rgb(235, 235, 235);
     private static final Color COLOR_GNOME_BOOTS = Color.rgb(90, 60, 35);
     private static final Color COLOR_PLAYER_OUTLINE = Color.rgb(40, 40, 40, 0.35);
-
-    // Entity padding (pixels inset from tile edge)
-    private static final int EXPLOSION_PADDING = 4;
-    private static final int POWERUP_PADDING   = 10;
 
     // Grid line styling
     private static final Color GRID_LINE_COLOR = Color.rgb(0, 0, 0, 0.15);
