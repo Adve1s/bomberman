@@ -122,7 +122,7 @@ public class Renderer {
                     drawPixelTextureDetails(x, y, row, col, COLOR_GRASS_DARK, COLOR_GRASS_LIGHT);
                 }
                 if (tile == Tile.WALL) {
-                    if (isOuterBorderTile(map, row, col)) {
+                    if (isOuterBorderTile(map, row, col) || isShrinkingBushWall(map, row, col)) {
                         drawBushWall(x, y, row, col);
                     } else {
                         drawRockWall(x, y, row, col);
@@ -140,6 +140,27 @@ public class Renderer {
 
     private boolean isOuterBorderTile(GameMapView map, int row, int col) {
         return row == 0 || col == 0 || row == map.getRows() - 1 || col == map.getCols() - 1;
+    }
+
+    private boolean isShrinkingBushWall(GameMapView map, int row, int col) {
+        boolean fullRowWall = true;
+        boolean fullColWall = true;
+
+        for (int c = 0; c < map.getCols(); c++) {
+            if (map.getTile(row, c) != Tile.WALL) {
+                fullRowWall = false;
+                break;
+            }
+        }
+
+        for (int r = 0; r < map.getRows(); r++) {
+            if (map.getTile(r, col) != Tile.WALL) {
+                fullColWall = false;
+                break;
+            }
+        }
+
+        return fullRowWall || fullColWall;
     }
 
     private void drawPixelTextureDetails(double x, double y, int row, int col, Color darkColor, Color lightColor) {
@@ -394,19 +415,347 @@ public class Renderer {
         for (PowerUpView powerUp : state.getPowerUpViews()) {
             if (!powerUp.isActive()) continue;
 
-            switch (powerUp.getType()) {
-                case EXTRA_BOMB -> graphicsContext.setFill(COLOR_POWERUP_BOMB);
-                case SPEED_BOOST -> graphicsContext.setFill(COLOR_POWERUP_SPEED);
-                case EXTRA_RANGE -> graphicsContext.setFill(COLOR_POWERUP_RANGE);
-            }
+            double x = powerUp.getPixelX();
+            double y = powerUp.getPixelY();
 
-            graphicsContext.fillOval(
-                    powerUp.getPixelX() + POWERUP_PADDING,
-                    powerUp.getPixelY() + POWERUP_PADDING,
-                    Constants.TILE_SIZE - POWERUP_PADDING * 2,
-                    Constants.TILE_SIZE - POWERUP_PADDING * 2
-            );
+            switch (powerUp.getType()) {
+                case SPEED_BOOST -> drawSpeedBeetlePowerUp(x, y);
+                case EXTRA_BOMB -> drawExtraBombPowerUp(x, y);
+                case EXTRA_RANGE -> drawExtraRangePowerUp(x, y);
+            }
         }
+    }
+
+    private void drawSpeedBeetlePowerUp(double x, double y) {
+        double size = Constants.TILE_SIZE;
+
+        Color bodyDark = Color.rgb(35, 95, 170);
+        Color bodyBase = Color.rgb(70, 165, 255);
+        Color bodyLight = Color.rgb(155, 220, 255);
+        Color legColor = Color.rgb(30, 70, 120);
+        Color wingLine = Color.rgb(210, 245, 255, 0.9);
+
+        graphicsContext.setFill(COLOR_PLAYER_SHADOW);
+        graphicsContext.fillOval(
+                x + size * 0.26,
+                y + size * 0.78,
+                size * 0.48,
+                size * 0.10
+        );
+
+        graphicsContext.setStroke(legColor);
+        graphicsContext.setLineWidth(2);
+
+        graphicsContext.strokeLine(x + size * 0.36, y + size * 0.48, x + size * 0.22, y + size * 0.38);
+        graphicsContext.strokeLine(x + size * 0.36, y + size * 0.56, x + size * 0.20, y + size * 0.58);
+        graphicsContext.strokeLine(x + size * 0.38, y + size * 0.66, x + size * 0.24, y + size * 0.76);
+
+        graphicsContext.strokeLine(x + size * 0.64, y + size * 0.48, x + size * 0.78, y + size * 0.38);
+        graphicsContext.strokeLine(x + size * 0.64, y + size * 0.56, x + size * 0.80, y + size * 0.58);
+        graphicsContext.strokeLine(x + size * 0.62, y + size * 0.66, x + size * 0.76, y + size * 0.76);
+
+        graphicsContext.setFill(bodyDark);
+        graphicsContext.fillOval(
+                x + size * 0.38,
+                y + size * 0.18,
+                size * 0.24,
+                size * 0.20
+        );
+
+        graphicsContext.setFill(bodyBase);
+        graphicsContext.fillOval(
+                x + size * 0.26,
+                y + size * 0.30,
+                size * 0.48,
+                size * 0.42
+        );
+
+        graphicsContext.setFill(bodyLight);
+        graphicsContext.fillOval(
+                x + size * 0.31,
+                y + size * 0.35,
+                size * 0.17,
+                size * 0.22
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.52,
+                y + size * 0.35,
+                size * 0.17,
+                size * 0.22
+        );
+
+        graphicsContext.setStroke(bodyDark);
+        graphicsContext.setLineWidth(2.2);
+
+        graphicsContext.strokeOval(
+                x + size * 0.26,
+                y + size * 0.30,
+                size * 0.48,
+                size * 0.42
+        );
+
+        graphicsContext.strokeOval(
+                x + size * 0.38,
+                y + size * 0.18,
+                size * 0.24,
+                size * 0.20
+        );
+
+        graphicsContext.strokeLine(
+                x + size * 0.50,
+                y + size * 0.31,
+                x + size * 0.50,
+                y + size * 0.71
+        );
+
+        graphicsContext.setStroke(wingLine);
+        graphicsContext.setLineWidth(1.5);
+
+        graphicsContext.strokeOval(
+                x + size * 0.33,
+                y + size * 0.39,
+                size * 0.11,
+                size * 0.14
+        );
+
+        graphicsContext.strokeOval(
+                x + size * 0.56,
+                y + size * 0.39,
+                size * 0.11,
+                size * 0.14
+        );
+
+        graphicsContext.setStroke(legColor);
+        graphicsContext.setLineWidth(2);
+
+        graphicsContext.strokeLine(x + size * 0.44, y + size * 0.22, x + size * 0.36, y + size * 0.12);
+        graphicsContext.strokeLine(x + size * 0.56, y + size * 0.22, x + size * 0.64, y + size * 0.12);
+
+        graphicsContext.setFill(Color.WHITE);
+        graphicsContext.fillOval(
+                x + size * 0.44,
+                y + size * 0.24,
+                size * 0.03,
+                size * 0.03
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.53,
+                y + size * 0.24,
+                size * 0.03,
+                size * 0.03
+        );
+    }
+
+    private void drawExtraBombPowerUp(double x, double y) {
+        double size = Constants.TILE_SIZE;
+
+        Color acornBodyDark = Color.rgb(120, 65, 25);
+        Color acornBodyBase = Color.rgb(185, 105, 35);
+        Color acornBodyLight = Color.rgb(235, 155, 70);
+
+        Color capDark = Color.rgb(135, 105, 45);
+        Color capBase = Color.rgb(185, 145, 70);
+        Color capLight = Color.rgb(225, 190, 110);
+
+        Color stemColor = Color.rgb(95, 70, 35);
+
+        graphicsContext.setFill(COLOR_PLAYER_SHADOW);
+        graphicsContext.fillOval(
+                x + size * 0.24,
+                y + size * 0.80,
+                size * 0.52,
+                size * 0.10
+        );
+
+        graphicsContext.setFill(acornBodyDark);
+        graphicsContext.fillOval(
+                x + size * 0.24,
+                y + size * 0.30,
+                size * 0.52,
+                size * 0.48
+        );
+
+        graphicsContext.setFill(acornBodyBase);
+        graphicsContext.fillOval(
+                x + size * 0.27,
+                y + size * 0.32,
+                size * 0.46,
+                size * 0.44
+        );
+
+        graphicsContext.setFill(acornBodyLight);
+        graphicsContext.fillOval(
+                x + size * 0.38,
+                y + size * 0.40,
+                size * 0.14,
+                size * 0.12
+        );
+
+        graphicsContext.setFill(capDark);
+        graphicsContext.fillOval(
+                x + size * 0.26,
+                y + size * 0.16,
+                size * 0.48,
+                size * 0.24
+        );
+
+        graphicsContext.setFill(capBase);
+        graphicsContext.fillOval(
+                x + size * 0.29,
+                y + size * 0.18,
+                size * 0.42,
+                size * 0.20
+        );
+
+        graphicsContext.setFill(capLight);
+        graphicsContext.fillOval(
+                x + size * 0.38,
+                y + size * 0.22,
+                size * 0.12,
+                size * 0.06
+        );
+
+        graphicsContext.setFill(stemColor);
+        graphicsContext.fillRoundRect(
+                x + size * 0.47,
+                y + size * 0.08,
+                size * 0.06,
+                size * 0.10,
+                4,
+                4
+        );
+
+        graphicsContext.setStroke(Color.rgb(150, 115, 55, 0.85));
+        graphicsContext.setLineWidth(1.5);
+
+        graphicsContext.strokeLine(
+                x + size * 0.36,
+                y + size * 0.23,
+                x + size * 0.64,
+                y + size * 0.23
+        );
+
+        graphicsContext.strokeLine(
+                x + size * 0.34,
+                y + size * 0.28,
+                x + size * 0.66,
+                y + size * 0.28
+        );
+
+        graphicsContext.strokeLine(
+                x + size * 0.37,
+                y + size * 0.33,
+                x + size * 0.63,
+                y + size * 0.33
+        );
+    }
+
+    private void drawExtraRangePowerUp(double x, double y) {
+        double size = Constants.TILE_SIZE;
+
+        Color capDark = Color.rgb(95, 55, 145);
+        Color capBase = Color.rgb(145, 85, 210);
+        Color capLight = Color.rgb(205, 155, 255);
+
+        Color stemDark = Color.rgb(210, 195, 170);
+        Color stemBase = Color.rgb(240, 225, 200);
+
+        Color spotColor = Color.rgb(245, 220, 255);
+        Color glowColor = Color.rgb(210, 140, 255, 0.35);
+
+        graphicsContext.setFill(COLOR_PLAYER_SHADOW);
+        graphicsContext.fillOval(
+                x + size * 0.24,
+                y + size * 0.80,
+                size * 0.52,
+                size * 0.10
+        );
+
+        graphicsContext.setFill(glowColor);
+        graphicsContext.fillOval(
+                x + size * 0.18,
+                y + size * 0.18,
+                size * 0.64,
+                size * 0.58
+        );
+
+        graphicsContext.setFill(stemDark);
+        graphicsContext.fillRoundRect(
+                x + size * 0.41,
+                y + size * 0.46,
+                size * 0.18,
+                size * 0.24,
+                8,
+                8
+        );
+
+        graphicsContext.setFill(stemBase);
+        graphicsContext.fillRoundRect(
+                x + size * 0.43,
+                y + size * 0.44,
+                size * 0.14,
+                size * 0.24,
+                8,
+                8
+        );
+
+        graphicsContext.setFill(capDark);
+        graphicsContext.fillOval(
+                x + size * 0.22,
+                y + size * 0.22,
+                size * 0.56,
+                size * 0.30
+        );
+
+        graphicsContext.setFill(capBase);
+        graphicsContext.fillOval(
+                x + size * 0.25,
+                y + size * 0.24,
+                size * 0.50,
+                size * 0.26
+        );
+
+        graphicsContext.setFill(capLight);
+        graphicsContext.fillOval(
+                x + size * 0.35,
+                y + size * 0.28,
+                size * 0.16,
+                size * 0.08
+        );
+
+        graphicsContext.setFill(spotColor);
+        graphicsContext.fillOval(
+                x + size * 0.34,
+                y + size * 0.30,
+                size * 0.07,
+                size * 0.05
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.51,
+                y + size * 0.29,
+                size * 0.08,
+                size * 0.06
+        );
+
+        graphicsContext.fillOval(
+                x + size * 0.44,
+                y + size * 0.36,
+                size * 0.06,
+                size * 0.04
+        );
+
+        graphicsContext.setStroke(Color.rgb(235, 200, 255, 0.8));
+        graphicsContext.setLineWidth(2);
+
+        graphicsContext.strokeOval(
+                x + size * 0.16,
+                y + size * 0.16,
+                size * 0.68,
+                size * 0.62
+        );
     }
 
     private void drawBombs(GameStateView state) {
