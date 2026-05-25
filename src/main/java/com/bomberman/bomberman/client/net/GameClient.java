@@ -75,8 +75,21 @@ public class GameClient {
      * CONNECT_TIMEOUT_MS. Caller must run this off the FX thread.
      */
     public void connect(String host) throws IOException {
+        String hostName = host;
+        int port = Constants.NETWORK_PORT;
+
+        int colon = host.lastIndexOf(':');
+        if (colon >= 0) {
+            hostName = host.substring(0, colon);
+            try {
+                port = Integer.parseInt(host.substring(colon + 1).trim());
+            } catch (NumberFormatException e) {
+                throw new IOException("Invalid port in address: " + host);
+            }
+        }
+
         kryoClient.start();
-        kryoClient.connect(CONNECT_TIMEOUT_MS, host, Constants.NETWORK_PORT);
+        kryoClient.connect(CONNECT_TIMEOUT_MS, hostName, port);
         kryoClient.sendTCP(new JoinRequest(playerName));
         pingExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "ping-sender");
@@ -93,7 +106,7 @@ public class GameClient {
                 }
             } catch (Exception ignored) {}
         }, 1000, 1000, TimeUnit.MILLISECONDS);
-        System.out.println("[client] connected to " + host + ":" + Constants.NETWORK_PORT);
+        System.out.println("[client] connected to " + hostName + ":" + port);
     }
 
     public void disconnect() {
